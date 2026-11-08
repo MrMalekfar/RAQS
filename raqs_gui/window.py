@@ -9,11 +9,12 @@ from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase, QPixmap
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (
     QComboBox, QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMainWindow,
-    QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
+    QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QScrollArea,
     QTabWidget, QVBoxLayout, QWidget,
 )
 
 from .jobs import parse_snapshot, prepare_run, read_result
+from .editor import ProfileEditor
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -43,6 +44,7 @@ class MainWindow(QMainWindow):
         self.result_directory = None
         self.images = []
         self.active = False
+        self.dirty = False
         self.process = QProcess(self)
         self.process.finished.connect(self.finished)
         self.process.errorOccurred.connect(self.process_error)
@@ -61,7 +63,7 @@ class MainWindow(QMainWindow):
         subtitle = QLabel('Rydberg sensing  /  Profile inspection, isolated execution and results')
         subtitle.setWordWrap(True)
         layout.addWidget(subtitle)
-        self.notice = QLabel('Open a profile to begin. This technical prototype leaves the physical model unchanged.')
+        self.notice = QLabel('Choose New Profile to enter inputs, or Open Profile to import JSON. The physical model is unchanged.')
         self.notice.setWordWrap(True)
         self.notice.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(self.notice)
@@ -71,10 +73,25 @@ class MainWindow(QMainWindow):
         profiles = QWidget()
         column = QVBoxLayout(profiles)
         row = QHBoxLayout()
+        self.template_choice = QComboBox()
+        self.template_choice.setAccessibleName('New profile template')
+        for label, filename in (
+            ('Near-resonant experimental', 'lab006/experimental_near_resonant.json'),
+            ('Prescribed diagnostics', 'lab006/prescribed_reference.json'),
+            ('Prescribed thermal / spectrum', 'lab007/prescribed_full.json'),
+            ('Experimental thermal / spectrum', 'lab007/experimental_full.json'),
+        ):
+            self.template_choice.addItem(label, filename)
+        self.new_button = QPushButton('&New Profile')
+        self.new_button.clicked.connect(self.new_profile)
+        row.addWidget(self.template_choice)
+        row.addWidget(self.new_button)
+        column.addLayout(row)
+        row = QHBoxLayout()
         self.open_button = QPushButton('&Open Profile…')
         self.open_button.clicked.connect(self.open_profile)
         self.reload_button = QPushButton('&Reload')
-        self.reload_button.clicked.connect(lambda: self.load_profile(self.source))
+        self.reload_button.clicked.connect(self.reload_profile)
         self.copy_button = QPushButton('Save &Copy…')
         self.copy_button.clicked.connect(self.save_copy)
         for button in (self.open_button, self.reload_button, self.copy_button):
@@ -85,8 +102,13 @@ class MainWindow(QMainWindow):
         self.profile_label.setWordWrap(True)
         column.addWidget(self.profile_label)
         self.profile_text = text_view()
-        self.profile_text.setPlaceholderText('Choose an existing JSON profile. Inputs are read-only in this prototype.')
-        column.addWidget(self.profile_text)
+        self.profile_text.setPlaceholderText('Choose New Profile or import JSON. The preview follows the current form.')
+        self.editor = ProfileEditor()
+        self.editor.changed.connect(self.form_changed)
+        self.profile_views = QTabWidget()
+        self.profile_views.addTab(self.editor, 'Inputs')
+        self.profile_views.addTab(self.profile_text, 'JSON Preview')
+        column.addWidget(self.profile_views)
         self.tabs.addTab(profiles, 'Profiles')
 
         diagnostics = QWidget()
@@ -166,10 +188,11 @@ class MainWindow(QMainWindow):
         self.update_controls()
 
     def update_controls(self):
-        for control in (self.open_button, self.output, self.browse_button, self.open_result_button):
+        for control in (self.open_button, self.new_button, self.template_choice, self.editor, self.output, self.browse_button, self.open_result_button):
             control.setEnabled(not self.active)
-        for control in (self.reload_button, self.copy_button, self.diagnostic_button):
+        for control in (self.copy_button, self.diagnostic_button):
             control.setEnabled(self.raw is not None and not self.active)
+        self.reload_button.setEnabled(self.source is not None and not self.active)
         self.sensing_button.setEnabled(self.profile is not None and self.profile.run_config is not None and not self.active)
         self.folder_button.setEnabled(self.result_directory is not None)
 
@@ -177,27 +200,74 @@ class MainWindow(QMainWindow):
         self.notice.setText(f'Error: {exc}')
 
     def open_profile(self):
+        if not self.confirm_discard():
+            return
         path, _ = QFileDialog.getOpenFileName(self, 'Open RAQS Profile', str(ROOT / 'examples'), 'JSON profiles (*.json)')
         if path:
             self.load_profile(Path(path))
+
+    def confirm_discard(self):
+        return not self.dirty or QMessageBox.question(
+            self, 'Unsaved profile changes', 'Discard the unsaved changes to the current profile?',
+            QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Discard
+
+    def new_profile(self):
+        if self.active or not self.confirm_discard():
+            return
+        self.load_profile(ROOT / 'examples' / self.template_choice.currentData())
+        if self.raw is not None:
+            self.source = None
+            self.profile_label.setText('New profile from ' + self.template_choice.currentText())
+            self.notice.setText('Template loaded. Edit Inputs directly, then save a copy or run. Template values are simulation assumptions, not hardware calibration.')
+            self.update_controls()
+
+    def reload_profile(self):
+        if self.confirm_discard():
+            self.load_profile(self.source)
 
     def load_profile(self, path):
         if path is None or self.active:
             return
         self.raw = self.profile = None
+        self.dirty = False
         self.source = Path(path)
         self.profile_text.clear()
         self.diagnostics_text.clear()
         self.clear_result()
+        self.editor.clear_profile()
         try:
             raw = self.source.read_bytes()
             profile = parse_snapshot(raw)
+            self.editor.load_document(json.loads(raw.decode('utf-8-sig')))
             self.profile_text.setPlainText(raw.decode('utf-8-sig'))
             self.raw, self.profile = raw, profile
             self.profile_label.setText(f'{self.source}\nMode: {profile.mode}  |  Atom: {profile.atom.species if profile.atom else "Rb85 (default)"}  |  Sensing: {"available" if profile.run_config else "not declared"}')
-            self.notice.setText('Profile parsed. Resolve Diagnostics to inspect the declared physics, or open Run to execute.')
+            self.notice.setText('Profile imported into Inputs. Edit values directly; the JSON preview and execution follow the current validated form.')
         except Exception as exc:
             self.profile_label.setText(f'Profile could not be loaded: {path}')
+            self.error(exc)
+        self.update_controls()
+
+    def form_changed(self):
+        if self.active:
+            return
+        self.dirty = True
+        self.raw = self.profile = None
+        self.diagnostics_text.clear()
+        self.clear_result()
+        self.profile_label.setText(f'{self.source or "New profile"} — unsaved edits')
+        self.stage.setText('Inputs changed — previous diagnostics and results cleared')
+        raw = None
+        try:
+            raw = self.editor.snapshot()
+            self.profile_text.setPlainText(raw.decode('utf-8'))
+            self.profile = parse_snapshot(raw)
+            self.raw = raw
+            self.notice.setText('Inputs validated by the profile parser. Unsaved changes will be included in the next run snapshot.')
+        except Exception as exc:
+            if raw is None:
+                self.profile_text.setPlainText('Draft is not executable. Correct the inputs.\n' + str(exc))
             self.error(exc)
         self.update_controls()
 
@@ -207,7 +277,11 @@ class MainWindow(QMainWindow):
             try:
                 with Path(path).open('xb') as stream:
                     stream.write(self.raw)
-                self.notice.setText(f'Exact profile copy saved: {path}')
+                self.source = Path(path)
+                self.dirty = False
+                self.profile_label.setText(str(self.source))
+                self.notice.setText(f'Current validated profile saved: {path}')
+                self.update_controls()
             except OSError as exc:
                 self.error(exc)
 
@@ -341,4 +415,7 @@ class MainWindow(QMainWindow):
             self.notice.setText('A simulation is still running. Wait for completion before closing the workbench.')
             event.ignore()
         else:
-            event.accept()
+            if self.confirm_discard():
+                event.accept()
+            else:
+                event.ignore()
