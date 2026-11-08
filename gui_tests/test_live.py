@@ -43,17 +43,21 @@ def test_two_fresh_qt_jobs_and_cli_equivalence(tmp_path):
     assert report['diagnostics_only'] and not images
     assert (diagnostic_directory / 'profile.json').read_bytes() == original
     window.load_profile(ROOT / 'examples/lab006/experimental_near_resonant.json')
+    window.editor.controls[('fields', 'signal', 'electric_field_vm')].setText('0.006')
     window.start_run(False)
+    assert not window.editor.isEnabled()
     wait_for_worker(app, window)
+    assert window.editor.isEnabled()
     sensing_directory = window.result_directory
     assert sensing_directory != diagnostic_directory
     report, images = read_result(sensing_directory)
     assert len(images) >= 4 and not window.image.pixmap().isNull()
     assert report['sensing']['estimated_aoa_deg'] == -30.
+    assert report['applied_fields']['signal']['electric_field_vm'] == .006
     cli_directory = tmp_path / 'cli'
     with (tmp_path / 'cli.log').open('w', encoding='utf-8') as stream:
         completed = subprocess.run([sys.executable, 'main.py', '--profile',
-            'examples/lab006/experimental_near_resonant.json', '--no-plots',
+            str(sensing_directory / 'profile.json'), '--no-plots',
             '--output-dir', str(cli_directory)], cwd=ROOT, stdout=stream,
             stderr=subprocess.STDOUT, timeout=180)
     assert completed.returncode == 0, (tmp_path / 'cli.log').read_text(encoding='utf-8')
@@ -65,4 +69,5 @@ def test_two_fresh_qt_jobs_and_cli_equivalence(tmp_path):
             np.testing.assert_array_equal(gui_arrays[key], cli_arrays[key])
     manifest = json.loads((sensing_directory / 'manifest.json').read_text())
     assert manifest['packages']['ARC-Alkali-Rydberg-Calculator'] == '3.9.0'
+    window.dirty = False
     window.close()
