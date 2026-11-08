@@ -1,13 +1,51 @@
-# پروفایل، خروجی و آزمون
+# اجرای پروفایل و تفسیر خروجی
 
-پروفایل با `--profile` به `main.py` یا `cli.py` داده می‌شود. `--diagnostics-only` فقط حل و گزارش تنظیمات اعلام‌شده را درخواست می‌کند؛ `--no-plots` نمایش و تولید شکل در مسیر CLI را خاموش می‌کند؛ `--output-dir` مقصد ذخیره را مشخص می‌کند. مرجع گزینه‌های قابل اجرا `--help` است.
+## انتخاب و اجرای معتبر
 
-برای شروع از نمونه‌های `examples/lab006/` استفاده کنید. `examples/lab007/` پروفایل‌های کامل‌تر و `examples/noise*/` تنظیمات نویز و study را پوشش می‌دهند. نمونه‌ها را ابتدا کپی و سپس متناسب با مطالعه ویرایش کنید؛ تغییر یک اثر، اثبات اعتبار علمی آن پیکربندی نیست.
+main.py و cli.py به cli.main می‌رسند. --profile الزامی است؛ بدون آن fallback قدیمی وجود ندارد. با وجود نمایش گزینه‌های قدیمی --n-elements، --target-aoa، --rf-frequency، --lo-rf-frequency، --spacing و --cell-length در help، ترکیب آن‌ها با پروفایل رد می‌شود. ورودی را در یک کپی از JSON ویرایش کنید.
 
-نتیجهٔ تک‌پروفایل می‌تواند شامل `run_report.json`، `simulation_arrays.npz` و شکل‌های درخواست‌شده باشد. مطالعهٔ چندنقطه‌ای گزارش و خروجی نقاط را با writer مربوط به study ذخیره می‌کند. `outputs/` در Git ثبت نمی‌شود؛ ذخیرهٔ خارج از Git جای پشتیبان‌گیری نتایج پژوهشی را نمی‌گیرد.
+تابع load_run_profile در [run_profile.py](../rydberg_aoa/config/run_profile.py) schema را سخت‌گیرانه می‌خواند؛ کلید ناشناخته، تکراری، مقدار غیرمتناهی یا declaration ناقص پذیرفته نمی‌شود. نسخهٔ 1 برای prescribed فقط diagnostics و برای experimental اجرای sensing دارد. نسخهٔ 2 environment، spectrum و execution صریح را اضافه می‌کند و prescribed sensing را نیز می‌پذیرد. spectrum می‌تواند null باشد؛ محیط حرارتی به‌تنهایی Doppler زمانی را فعال نمی‌کند.
 
-اجرای مرجع باید پروفایل، seed، نسخهٔ کد و هر تغییر ثبت‌نشده را مشخص کند. داده‌ای که قرار است fixture یا مرجع ورودی شود باید جداگانه با منشأ، واحد و نسخهٔ روشن نگهداری شود. مقدارهای baseline ریشه، ورودی آزمون رگرسیون‌اند و خروجی موقت محسوب نمی‌شوند.
+در prescribed نردبان را شما تعیین می‌کنید؛ در experimental کانال با preparation و bounds از RF انتخاب می‌شود. طول‌موج پیشنهادی در proposed_wavelengths_nm_not_applied خودکار اعمال نمی‌شود. reference در نام فایل به معنی نزدیک‌بودن همهٔ میدان‌ها به رزونانس نیست؛ prescribed_reference نمونهٔ تشخیصی و دارای detuning اپتیکی بزرگ است.
 
-برای کشف آزمون‌ها `python -m pytest --collect-only -q` و برای بررسی کوتاه مسیر اصلی `python -m pytest tests/test_lab006_live_entrypoint.py -q` را اجرا کنید. fixtureهای مقداردهی اتمی در `tests/conftest.py` صریح‌اند؛ skip در مرز مستند QN-001A معادل اعتبارسنجی موفق همان مسیر نیست.
+دستورهای شروع در [README اصلی](../README.md) آمده‌اند. --diagnostics-only workers و DoA معمول را اجرا نمی‌کند؛ برای study مجاز نیست. --no-plots تولید/نمایش شکل CLI را خاموش می‌کند. بدون --output-dir گزارش در ترمینال چاپ می‌شود؛ ذخیرهٔ فایل‌ها را صریح بخواهید. stdout را همیشه JSON خالص فرض نکنید؛ پیام‌های کتابخانه‌ها ممکن است همراه آن باشند.
 
-نسخهٔ انتشار از آرشیو محلی مستقل است. manifest موجود در `examples/literature001/` همراه با پروفایل‌ها دادهٔ ثابت آزمون نمونه‌های ادبیات است؛ ادعای بازتولید دقیق آزمایش ندارد و نباید با نتیجهٔ اجرای تازه جایگزین شود.
+## خواندن نتیجه
+
+| بخش گزارش | تفسیر |
+| --- | --- |
+| atom، levels، applied_fields | گونه، تراز حل‌شده و میدان اعمال‌شده؛ با پروفایل تطبیق دهید |
+| detunings_rad_per_us، rabi_rad_per_us | detuningهای probe/coupling/RF و Rabiهای probe/coupling/LO/signal |
+| rf_orientation، signed_if_mhz | جهت انرژی RF و اختلاف علامت‌دار signal−LO؛ یکی نیستند |
+| decay_rate_basis، radiative_model | مبنای نرخ و دامنهٔ مدل radiative |
+| diagnostics_only، sensing | تشخیص در برابر اجرای زمانی؛ نبود sensing در diagnostics طبیعی است |
+| sensing | زاویهٔ واقعی/تخمینی، تعداد مسیر و نمونه و تنظیمات اجرای مؤثر |
+| if_measurement | سنجه‌های استخراج IF؛ واحد و تعریف هر سنجه را از همان بخش بخوانید |
+| noise_status و پرچم‌های included | اثر اجراشده را از declaration جدا می‌کنند |
+| temporal_ode | تنظیمات و وضعیت اجرای حل؛ برای ادعای همگرایی کافی نیست |
+
+در نمونهٔ آغازین نویز، Zeeman و ensemble Doppler فعال نیستند. برابری زاویه در این نمونهٔ ایده‌آل و تک‌منبع، دقت آماری یا عملکرد در نویز را تعیین نمی‌کند. پارامتر target_azimuth_deg ورودی حقیقت شبیه‌سازی است، دادهٔ تجربی نیست.
+
+تابع save_profile_results در [profile_execution.py](../rydberg_aoa/simulation/profile_execution.py) دادهٔ تک‌اجرا را در simulation_arrays.npz می‌نویسد. برای مسیر AoA معمول:
+
+- tlist زمان µs و time_traces به ترتیب مسیر، سپس زمان است.
+- complex_responses پاسخ مختلط هر مسیر و array_positions موقعیت‌های متناظر است.
+- if_snapshots ماتریس حسگر × پنجره و sample_covariance کوواریانس همین داده است.
+- fft_frequency_path_* و fft_complex_path_* دادهٔ FFT هر مسیرند؛ طیف FFT را با تخمین دقیق IF یکی نگیرید.
+- angles و power فقط برای تخمین‌گر دارای طیف ذخیره می‌شوند؛ ESPRIT و Root-MUSIC الزاماً منحنی زاویه‌ای ندارند.
+- spectrum_*، trial_* و آرایه‌های detector فقط در مسیر مرتبط حاضرند. واحد trace نویزی را از sensing_trace_units یا receipt آشکارساز بخوانید؛ همهٔ traceها جریان الکتریکی نیستند.
+
+برای خواندن آرایه‌ها با NumPy از np.load روی مسیر فایل استفاده کنید و ابتدا نام‌ها و shapeها را بررسی کنید. خروجی IF-only قرارداد مستقل در [if_only.py](../rydberg_aoa/simulation/if_only.py) دارد؛ وجود آرایه‌های AoA را برای آن فرض نکنید.
+
+## study و نگهداری داده
+
+CLI برای پروفایل study از [execute_study](../rydberg_aoa/simulation/study_execution.py) استفاده می‌کند. [study_output.py](../rydberg_aoa/simulation/study_output.py) گزارش study_report.json، پروفایل study_profile.json و زیرپوشه‌های نقاط/trialهای متناسب با نوع مطالعه را می‌نویسد. برخی مسیرها calibration و null_validation جدا دارند. writer از مخلوط‌کردن manifest موجود با مطالعهٔ تازه جلوگیری می‌کند؛ بااین‌حال همیشه پوشهٔ تازه بدهید. نبود گزارش نهایی پس از شکست، موفقیت مطالعه نیست.
+
+همراه نتیجه، JSON اصلی، نسخهٔ کد و محیط و تنظیمات عددی را نگه دارید؛ [راهنمای پژوهشی](README.md) فهرست بازتولیدپذیری را توضیح می‌دهد.
+
+## عیب‌یابی
+
+- خطای ساخت ARC همراه readonly database: دسترسی نوشتن پایگاه کاربر را بررسی کنید؛ مشکل مجوز را با تغییر اتم یا دادهٔ ساختگی حل نکنید.
+- PhysicsConfigurationError: declaration، q، mJ، bounds و سازگاری گزینه‌ها را اصلاح کنید؛ خوانده‌شدن JSON اثبات حل‌پذیری فیزیک نیست.
+- خطای solver/worker: زنجیرهٔ خطا و تنظیمات را حفظ کنید؛ tolerance یا baseline را صرفاً برای عبور آزمون تغییر ندهید.
+- اجرای طولانی: تعداد مسیر، نمونه، کلاس سرعت، نقاط study و trialها هزینه را افزایش می‌دهند؛ ابتدا نمونهٔ آغازین را اجرا کنید.
