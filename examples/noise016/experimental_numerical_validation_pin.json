@@ -1,0 +1,195 @@
+{
+  "schema_version": 2,
+  "mode": "experimental",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 0.0001,
+      "beam_waist_mm": 0.07983624922707379,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.23842408988503,
+      "power_mw": 32.0,
+      "beam_waist_mm": 0.12230233924147474,
+      "detuning_mhz": 0.25,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649000000.0,
+      "electric_field_vm": 1.5,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649100000.0,
+      "electric_field_vm": 0.005,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "preparation": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4,
+      "mf": 0
+    },
+    "rydberg1_mj": -0.5,
+    "rydberg2_mj": -0.5,
+    "quantization_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "bounds": {
+    "n_min": 10,
+    "n_max": 110,
+    "max_l": 3,
+    "rf_tolerance_hz": 300000000.0,
+    "probe_window_nm": [
+      780.0,
+      781.0
+    ],
+    "coupling_window_nm": [
+      480.0,
+      490.0
+    ],
+    "rf_window_hz": [
+      130000000000.0,
+      135000000000.0
+    ]
+  },
+  "execution": {
+    "duration_us": 60.0,
+    "sample_count": 601,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 20.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.15,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.006283185307179587,
+      0.006283185307179587,
+      0.0
+    ],
+    "linewidth_enabled": true,
+    "collision_enabled": true,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "noise": {
+    "schema_version": 2,
+    "enabled": true,
+    "seed": 20261012,
+    "trials": 8,
+    "detector": {
+      "enabled": true,
+      "collection_efficiency": 0.5,
+      "responsivity_a_per_w": 0.5,
+      "dark_current_a": 1e-10,
+      "integration_time_us": 0.1,
+      "transimpedance_v_per_a": 20000.0,
+      "output_units": "V",
+      "aperture_model": "boxcar_sample_hold"
+    },
+    "sources": {
+      "photon_shot": {
+        "enabled": true
+      },
+      "dark_shot": {
+        "enabled": true
+      },
+      "electronic_current": {
+        "enabled": true,
+        "asd_a_per_sqrt_hz": 1e-14
+      },
+      "johnson_current": {
+        "enabled": true,
+        "temperature_k": 300.0,
+        "shunt_resistance_ohm": 1000000000.0
+      }
+    }
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "Illustrative simulation assumptions; no detector datasheet, measured PSD or experimental calibration is claimed."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  },
+  "study": {
+    "schema_version": 1,
+    "kind": "if_detection",
+    "name": "IF detection with independent null reference",
+    "values": [
+      0.001,
+      0.005,
+      0.02
+    ],
+    "path_index": 0,
+    "p_false_alarm": 0.1,
+    "p_detection": 0.8,
+    "confidence_level": 0.95,
+    "calibration_trials": 99,
+    "null_validation_trials": 100,
+    "trials_per_point": 100,
+    "seed": 14001,
+    "sensitivity": {
+      "enabled": true,
+      "selection": "minimum_supported_sampled_field",
+      "refinement": null
+    },
+    "numerical_validation": {
+      "enabled": true,
+      "cases": [
+        {
+          "name": "tight",
+          "rtol": 1e-08,
+          "atol": 1e-10,
+          "output_subdivision": 1
+        },
+        {
+          "name": "tighter",
+          "rtol": 1e-10,
+          "atol": 1e-12,
+          "output_subdivision": 1
+        },
+        {
+          "name": "denser",
+          "rtol": 1e-10,
+          "atol": 1e-12,
+          "output_subdivision": 2
+        }
+      ],
+      "if_absolute_budget": 1e-10,
+      "if_relative_budget": 0.01,
+      "decision_fraction_budget": 0.01,
+      "probability_difference_budget": 0.02,
+      "require_same_selected_field": true
+    }
+  }
+}

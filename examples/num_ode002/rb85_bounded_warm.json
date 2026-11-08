@@ -1,0 +1,125 @@
+{
+  "schema_version": 2,
+  "mode": "prescribed",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 5e-05,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.23842408988503,
+      "power_mw": 30.0,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649107728.76007,
+      "electric_field_vm": 0.19305319138980892,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649207728.76007,
+      "electric_field_vm": 0.00038610638277961784,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "quantization_axis": [
+    0.0,
+    0.0,
+    1.0
+  ],
+  "ladder": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3.0,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4.0,
+      "mf": 0
+    },
+    "rydberg1": {
+      "n": 26,
+      "l": 2,
+      "j": 2.5,
+      "mj": -0.5
+    },
+    "rydberg2": {
+      "n": 27,
+      "l": 1,
+      "j": 1.5,
+      "mj": -0.5
+    }
+  },
+  "execution": {
+    "duration_us": 40.0,
+    "sample_count": 401,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 10.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.0,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linewidth_enabled": false,
+    "collision_enabled": false,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "atom": {
+    "species": "Rb85",
+    "isotope_fraction": 1.0
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "ATOM-002 prepared 300 K reference candidate; ARC-centred applied fields, 30 mW coupling and 1 MHz LO cyclic Rabi are declared study choices. Qualification requires design.json cross-case checks; not an experimental calibration. NUM-ODE-002 explicit temporal accuracy candidate; ensemble qualification is not established. Bounded warm screening budget 3/5/9 classes; intentionally insufficient budget is a visible failure, not a validated reference."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  },
+  "temporal_doppler": {
+    "enabled": true,
+    "method": "uniform",
+    "initial_classes": 3,
+    "max_classes": 9,
+    "n_sigma": 5.0,
+    "rtol": 0.01,
+    "atol": 1e-10,
+    "counter_propagating": true
+  },
+  "numerics": {
+    "temporal_ode": {
+      "method": "bdf",
+      "rtol": 1e-10,
+      "atol": 1e-12,
+      "nsteps": 20000
+    }
+  }
+}

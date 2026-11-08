@@ -1,0 +1,149 @@
+{
+  "schema_version": 2,
+  "mode": "experimental",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 0.0001,
+      "beam_waist_mm": 0.07983624922707379,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.23842408988503,
+      "power_mw": 32.0,
+      "beam_waist_mm": 0.12230233924147474,
+      "detuning_mhz": 0.25,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649000000.0,
+      "electric_field_vm": 1.5,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649100000.0,
+      "electric_field_vm": 0.005,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "preparation": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4,
+      "mf": 0
+    },
+    "rydberg1_mj": -0.5,
+    "rydberg2_mj": -0.5,
+    "quantization_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "bounds": {
+    "n_min": 10,
+    "n_max": 110,
+    "max_l": 3,
+    "rf_tolerance_hz": 300000000.0,
+    "probe_window_nm": [
+      780.0,
+      781.0
+    ],
+    "coupling_window_nm": [
+      480.0,
+      490.0
+    ],
+    "rf_window_hz": [
+      130000000000.0,
+      135000000000.0
+    ]
+  },
+  "execution": {
+    "duration_us": 60.0,
+    "sample_count": 601,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0002825051753083888,
+        0.0,
+        0.0
+      ],
+      [
+        0.0005650103506167776,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 20.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.15,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.006283185307179587,
+      0.006283185307179587,
+      0.0
+    ],
+    "linewidth_enabled": true,
+    "collision_enabled": true,
+    "transit_enabled": true
+  },
+  "spectrum": {
+    "probe_offsets_mhz": [
+      -5.0,
+      -2.0,
+      -1.0,
+      -0.5,
+      0.0,
+      0.5,
+      1.0,
+      2.0,
+      5.0
+    ],
+    "doppler_enabled": true,
+    "method": "adaptive",
+    "n_classes": 31,
+    "n_sigma": 5.0,
+    "rtol": 0.0001,
+    "atol": 1e-09,
+    "counter_propagating": true,
+    "analytical_enabled": true
+  },
+  "noise": {
+    "schema_version": 1,
+    "enabled": true,
+    "seed": 20261012,
+    "trials": 30,
+    "sources": {
+      "readout_gaussian": {
+        "enabled": true,
+        "sigma_observable": 1e-05
+      }
+    }
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "Illustrative simulation assumptions; no detector datasheet, measured PSD or experimental calibration is claimed."
+  }
+}

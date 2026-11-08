@@ -1,0 +1,133 @@
+{
+  "schema_version": 2,
+  "mode": "experimental",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 5e-05,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.2382744407927,
+      "power_mw": 30.0,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649127424.68666,
+      "electric_field_vm": 0.19305319138980892,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649227424.68666,
+      "electric_field_vm": 0.00038610638277961784,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "execution": {
+    "duration_us": 40.0,
+    "sample_count": 401,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 10.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.0,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linewidth_enabled": false,
+    "collision_enabled": false,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "atom": {
+    "species": "Rb87",
+    "isotope_fraction": 1.0
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "ATOM-002 prepared 300 K reference candidate; ARC-centred applied fields, 30 mW coupling and 1 MHz LO cyclic Rabi are declared study choices. Qualification requires design.json cross-case checks; not an experimental calibration. NUM-ODE-002 explicit temporal accuracy candidate; ensemble qualification is not established."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  },
+  "temporal_doppler": {
+    "enabled": true,
+    "method": "uniform",
+    "initial_classes": 65,
+    "max_classes": 1025,
+    "n_sigma": 5.0,
+    "rtol": 0.01,
+    "atol": 1e-10,
+    "counter_propagating": true
+  },
+  "preparation": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 2.0,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 3.0,
+      "mf": 0
+    },
+    "rydberg1_mj": -0.5,
+    "rydberg2_mj": -0.5,
+    "quantization_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "bounds": {
+    "n_min": 25,
+    "n_max": 28,
+    "max_l": 3,
+    "rf_tolerance_hz": 1000000.0,
+    "probe_window_nm": [
+      780.1414762021273,
+      780.3414762021273
+    ],
+    "coupling_window_nm": [
+      483.13827444079266,
+      483.3382744407927
+    ],
+    "rf_window_hz": [
+      132648127424.68666,
+      132650127424.68666
+    ]
+  },
+  "numerics": {
+    "temporal_ode": {
+      "method": "bdf",
+      "rtol": 1e-10,
+      "atol": 1e-12,
+      "nsteps": 20000
+    }
+  }
+}

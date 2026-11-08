@@ -1,0 +1,262 @@
+{
+  "kind": "partial_literature_benchmarks",
+  "exact_reproduction": false,
+  "calibration": "current ARC and canonical prescribed seam",
+  "cases": [
+    {
+      "profile": "holloway2014_17ghz.json",
+      "source_url": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=915858",
+      "source_location": "sections IV-V, figures 12-15",
+      "comparison_kind": "central_EIT_AT_spectrum_only",
+      "reported": {
+        "r1": [
+          50,
+          2,
+          2.5
+        ],
+        "r2": [
+          51,
+          1,
+          1.5
+        ],
+        "rf_hz": 17040000000.0,
+        "probe_power_mw": 0.000175,
+        "coupling_power_mw": 30.0,
+        "cell_length_m": 0.075,
+        "probe_fwhm_mm": 0.08,
+        "coupling_fwhm_mm": 0.1
+      },
+      "derived_model_inputs": {
+        "probe_wavelength_nm": 780.2414762021273,
+        "coupling_wavelength_nm": 480.1253274348574,
+        "probe_radius_mm": 0.06794574402304153,
+        "coupling_radius_mm": 0.08493218002880192,
+        "rf_field_peak_v_per_m": 1.0
+      },
+      "assumptions": [
+        "prepared F3 mF0 -> F4 mF0 -> mJ=-1/2 -> mJ=-1/2; all q=0",
+        "ARC FS-centroid resonant optical centers, not measured wavelengths",
+        "Gaussian peak-intensity model without spatial beam averaging; project transit reset; linewidth/collision omitted",
+        "no balanced receiver, propagation, full magnetic ensemble or experimental NEF",
+        "298.15 K interprets unspecified room temperature",
+        "RF peak field 1 V/m is assumed, not inferred from generator dBm",
+        "RF signal switched OFF; dummy IF is not 30 kHz optical modulation/lock-in"
+      ],
+      "initialization_checks": {
+        "initialized": true,
+        "detunings_rad_per_us": [
+          0.0,
+          7.853981633974482e-07,
+          -9.422259804740666
+        ],
+        "rabi_rad_per_us": [
+          24.494751868279167,
+          28.679817702786856,
+          126.60855684527709,
+          0.0
+        ],
+        "rf_orientation": {
+          "signed_frequency_hz": -17041499599.22302,
+          "direction": -1
+        }
+      },
+      "numerical_campaign_validated": false,
+      "published_curve_digitized": false
+    },
+    {
+      "profile": "holloway2014_68ghz.json",
+      "source_url": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=915858",
+      "source_location": "sections IV-V, figures 12-15",
+      "comparison_kind": "central_EIT_AT_spectrum_only",
+      "reported": {
+        "r1": [
+          32,
+          2,
+          2.5
+        ],
+        "r2": [
+          33,
+          1,
+          1.5
+        ],
+        "rf_hz": 68640000000.0,
+        "probe_power_mw": 0.00025,
+        "coupling_power_mw": 24.0,
+        "cell_length_m": 0.075,
+        "probe_fwhm_mm": 0.08,
+        "coupling_fwhm_mm": 0.1
+      },
+      "derived_model_inputs": {
+        "probe_wavelength_nm": 780.2414762021273,
+        "coupling_wavelength_nm": 481.7542459318105,
+        "probe_radius_mm": 0.06794574402304153,
+        "coupling_radius_mm": 0.08493218002880192,
+        "rf_field_peak_v_per_m": 1.0
+      },
+      "assumptions": [
+        "prepared F3 mF0 -> F4 mF0 -> mJ=-1/2 -> mJ=-1/2; all q=0",
+        "ARC FS-centroid resonant optical centers, not measured wavelengths",
+        "Gaussian peak-intensity model without spatial beam averaging; project transit reset; linewidth/collision omitted",
+        "no balanced receiver, propagation, full magnetic ensemble or experimental NEF",
+        "298.15 K interprets unspecified room temperature",
+        "RF peak field 1 V/m is assumed, not inferred from generator dBm",
+        "RF signal switched OFF; dummy IF is not 30 kHz optical modulation/lock-in"
+      ],
+      "initialization_checks": {
+        "initialized": true,
+        "detunings_rad_per_us": [
+          0.0,
+          0.0,
+          -15.628119328830262
+        ],
+        "rabi_rad_per_us": [
+          29.27682821151435,
+          51.432024547168794,
+          50.30398976729861,
+          0.0
+        ],
+        "rf_orientation": {
+          "signed_frequency_hz": -68642487292.44241,
+          "direction": -1
+        }
+      },
+      "numerical_campaign_validated": false,
+      "published_curve_digitized": false
+    },
+    {
+      "profile": "holloway2014_104ghz.json",
+      "source_url": "https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=915858",
+      "source_location": "sections IV-V, figures 12-15",
+      "comparison_kind": "central_EIT_AT_spectrum_only",
+      "reported": {
+        "r1": [
+          28,
+          2,
+          2.5
+        ],
+        "r2": [
+          29,
+          1,
+          1.5
+        ],
+        "rf_hz": 104770000000.0,
+        "probe_power_mw": 0.00012,
+        "coupling_power_mw": 22.0,
+        "cell_length_m": 0.075,
+        "probe_fwhm_mm": 0.08,
+        "coupling_fwhm_mm": 0.1
+      },
+      "derived_model_inputs": {
+        "probe_wavelength_nm": 780.2414762021273,
+        "coupling_wavelength_nm": 482.6303037318164,
+        "probe_radius_mm": 0.06794574402304153,
+        "coupling_radius_mm": 0.08493218002880192,
+        "rf_field_peak_v_per_m": 1.0
+      },
+      "assumptions": [
+        "prepared F3 mF0 -> F4 mF0 -> mJ=-1/2 -> mJ=-1/2; all q=0",
+        "ARC FS-centroid resonant optical centers, not measured wavelengths",
+        "Gaussian peak-intensity model without spatial beam averaging; project transit reset; linewidth/collision omitted",
+        "no balanced receiver, propagation, full magnetic ensemble or experimental NEF",
+        "298.15 K interprets unspecified room temperature",
+        "RF peak field 1 V/m is assumed, not inferred from generator dBm",
+        "RF signal switched OFF; dummy IF is not 30 kHz optical modulation/lock-in"
+      ],
+      "initialization_checks": {
+        "initialized": true,
+        "detunings_rad_per_us": [
+          0.0,
+          0.0,
+          96.82673665039654
+        ],
+        "rabi_rad_per_us": [
+          20.283581578723496,
+          60.81995856187503,
+          38.03906280572945,
+          0.0
+        ],
+        "rf_orientation": {
+          "signed_frequency_hz": -104754589546.23863,
+          "direction": -1
+        }
+      },
+      "numerical_campaign_validated": false,
+      "published_curve_digitized": false
+    },
+    {
+      "profile": "psn2026_pi_channel_proxy.json",
+      "source_url": "https://arxiv.org/pdf/2606.04354",
+      "source_location": "pp.2-3,5",
+      "comparison_kind": "partial_pi_channel_IF_proxy",
+      "reported": {
+        "r1": [
+          40,
+          2,
+          2.5
+        ],
+        "r2": [
+          39,
+          3,
+          3.5
+        ],
+        "rf_hz": 37071040000.0,
+        "probe_power_mw": 0.006,
+        "coupling_power_mw": 30.0,
+        "cell_length_m": 0.05,
+        "beam_diameter_mm": 0.15,
+        "if_hz": 40000.0,
+        "lo_rabi_cyclic_mhz": 3.7
+      },
+      "derived_model_inputs": {
+        "probe_wavelength_nm": 780.2414762021273,
+        "coupling_wavelength_nm": 480.750574328871,
+        "probe_radius_mm": 0.075,
+        "coupling_radius_mm": 0.075,
+        "rf_field_peak_v_per_m": 0.2884400729739878
+      },
+      "assumptions": [
+        "prepared F3 mF0 -> F4 mF0 -> mJ=-1/2 -> mJ=-1/2; all q=0",
+        "ARC FS-centroid resonant optical centers, not measured wavelengths",
+        "Gaussian peak-intensity model without spatial beam averaging; project transit reset; linewidth/collision omitted",
+        "no balanced receiver, propagation, full magnetic ensemble or experimental NEF",
+        "diameter interpreted as 1/e^2; publication does not specify convention",
+        "orthogonal linear coupling replaced by pi; this changes channel physics",
+        "SIG peak field 0.001 V/m and detuning zero are study choices, not Fig.3 calibration"
+      ],
+      "initialization_checks": {
+        "initialized": true,
+        "detunings_rad_per_us": [
+          0.0,
+          0.0,
+          -10.638771095584941
+        ],
+        "rabi_rad_per_us": [
+          129.93634327814837,
+          45.91164574389154,
+          23.24778563656447,
+          0.08059832115858953
+        ],
+        "rf_orientation": {
+          "signed_frequency_hz": 37072733213.008286,
+          "direction": 1
+        }
+      },
+      "numerical_campaign_validated": false,
+      "published_curve_digitized": false
+    }
+  ],
+  "blocked_references": [
+    {
+      "url": "https://doi.org/10.1038/s41567-020-0918-5",
+      "reason": "Cs and balanced/lock-in readout"
+    },
+    {
+      "url": "https://doi.org/10.1063/5.0045601",
+      "reason": "Cs and measured in-cell RF field geometry"
+    },
+    {
+      "url": "https://doi.org/10.1063/5.0240787",
+      "reason": "Cs, different signed IF and RC receiver"
+    }
+  ]
+}

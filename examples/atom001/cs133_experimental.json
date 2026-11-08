@@ -1,0 +1,115 @@
+{
+  "schema_version": 2,
+  "mode": "experimental",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 852.347275882783,
+      "power_mw": 5e-05,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 509.7144241530486,
+      "power_mw": 1.0,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 6945170011.139086,
+      "electric_field_vm": 0.005,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 6945270011.139086,
+      "electric_field_vm": 1e-05,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "execution": {
+    "duration_us": 20.0,
+    "sample_count": 201,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 0.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.0,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linewidth_enabled": false,
+    "collision_enabled": false,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "atom": {
+    "species": "Cs133",
+    "isotope_fraction": 1.0
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "ATOM-001 ARC-centred prepared single-isotope example; fields and preparation are modelling assumptions, not laboratory calibration."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  },
+  "preparation": {
+    "ground": {
+      "n": 6,
+      "l": 0,
+      "j": 0.5,
+      "f": 4.0,
+      "mf": 0
+    },
+    "excited": {
+      "n": 6,
+      "l": 1,
+      "j": 1.5,
+      "f": 5.0,
+      "mf": 0
+    },
+    "rydberg1_mj": -0.5,
+    "rydberg2_mj": -0.5,
+    "quantization_axis": [
+      0.0,
+      0.0,
+      1.0
+    ]
+  },
+  "bounds": {
+    "n_min": 46,
+    "n_max": 49,
+    "max_l": 3,
+    "rf_tolerance_hz": 1000000.0,
+    "probe_window_nm": [
+      852.247275882783,
+      852.4472758827831
+    ],
+    "coupling_window_nm": [
+      509.61442415304856,
+      509.8144241530486
+    ],
+    "rf_window_hz": [
+      6944170011.139086,
+      6946170011.139086
+    ]
+  }
+}

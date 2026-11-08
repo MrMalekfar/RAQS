@@ -1,0 +1,142 @@
+{
+  "schema_version": 2,
+  "mode": "prescribed",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 5e-05,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.23842408988503,
+      "power_mw": 30.0,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649107728.76007,
+      "electric_field_vm": 0.19305319138980892,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649207728.76007,
+      "electric_field_vm": 0.00038610638277961784,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "quantization_axis": [
+    0.0,
+    0.0,
+    1.0
+  ],
+  "ladder": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3.0,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4.0,
+      "mf": 0
+    },
+    "rydberg1": {
+      "n": 26,
+      "l": 2,
+      "j": 2.5,
+      "mj": -0.5
+    },
+    "rydberg2": {
+      "n": 27,
+      "l": 1,
+      "j": 1.5,
+      "mj": -0.5
+    }
+  },
+  "execution": {
+    "duration_us": 60.0,
+    "sample_count": 601,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 10.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.0,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linewidth_enabled": false,
+    "collision_enabled": false,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "atom": {
+    "species": "Rb85",
+    "isotope_fraction": 1.0
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "DOP-PROFILE-001: explicit adaptive positive Simpson plus independent Gauss-Legendre check on conditional +/-5 sigma. Simulation assumptions; no hardware calibration. BDF order=2 at declared accuracy. Full-reference qualification, infinite-domain and output-grid convergence are not claimed. Work caps per path; budget exhaustion aborts."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  },
+  "temporal_doppler": {
+    "initial_y_intervals": 8,
+    "hint_offsets_ms": [
+      -0.5,
+      0.0,
+      0.5
+    ],
+    "max_panels": 80,
+    "mass_relative_tolerance": 0.001,
+    "independent_legendre_order": 3,
+    "enabled": true,
+    "method": "adaptive_simpson",
+    "counter_propagating": true,
+    "n_sigma": 5.0,
+    "velocity_scale_ms": 1.0,
+    "max_new_solves": 400,
+    "max_wall_seconds": 7200.0,
+    "budgets": {
+      "phase_amplitude_floor": 1e-08,
+      "if_absolute": 1e-09,
+      "if_relative": 0.02,
+      "if_phase_rad": 0.002,
+      "trace_absolute": 1e-09,
+      "trace_relative": 0.02
+    }
+  },
+  "numerics": {
+    "temporal_ode": {
+      "method": "bdf",
+      "rtol": 1e-10,
+      "atol": 1e-12,
+      "nsteps": 20000,
+      "max_order": 2
+    }
+  }
+}

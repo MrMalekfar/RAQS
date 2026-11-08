@@ -1,0 +1,107 @@
+{
+  "schema_version": 2,
+  "mode": "prescribed",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.2414762021273,
+      "power_mw": 5e-05,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.23842408988503,
+      "power_mw": 1.0,
+      "beam_waist_mm": 0.1,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649107728.76007,
+      "electric_field_vm": 0.005,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649207728.76007,
+      "electric_field_vm": 1e-05,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "quantization_axis": [
+    0.0,
+    0.0,
+    1.0
+  ],
+  "ladder": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3.0,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4.0,
+      "mf": 0
+    },
+    "rydberg1": {
+      "n": 26,
+      "l": 2,
+      "j": 2.5,
+      "mj": -0.5
+    },
+    "rydberg2": {
+      "n": 27,
+      "l": 1,
+      "j": 1.5,
+      "mj": -0.5
+    }
+  },
+  "execution": {
+    "duration_us": 20.0,
+    "sample_count": 201,
+    "positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "target_azimuth_deg": -30.0,
+    "transient_delay_us": 0.0,
+    "sensor_probe_offset_mhz": 0.0,
+    "processes": 1,
+    "doa_method": "phase_beamforming",
+    "cycles_per_snapshot": 2
+  },
+  "environment": {
+    "temperature_k": 300.0,
+    "cell_length_m": 0.01,
+    "rate_source": "thermal_budget",
+    "linewidth_rates_per_us": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "linewidth_enabled": false,
+    "collision_enabled": false,
+    "transit_enabled": true
+  },
+  "spectrum": null,
+  "atom": {
+    "species": "Rb85",
+    "isotope_fraction": 1.0
+  },
+  "provenance": {
+    "classification": "simulation_assumptions",
+    "note": "ATOM-001 ARC-centred prepared single-isotope example; fields and preparation are modelling assumptions, not laboratory calibration."
+  },
+  "measurement": {
+    "mode": "if_only",
+    "signal_enabled": true
+  }
+}
