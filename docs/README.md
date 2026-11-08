@@ -2,6 +2,8 @@
 
 [شروع](../README.md) · [اجرا و خروجی](usage.md) · [مثال‌ها](../examples/README.md) · [آزمون‌ها](../tests/README.md) · [معماری](../architecture.md)
 
+[طرح توسعهٔ GUI](gui-plan.md) مسیر پیشنهادی ساخت رابط دسکتاپ انگلیسی را توضیح می‌دهد؛ این سند برنامهٔ آینده است و به معنی وجود GUI فعلی نیست.
+
 ## مدل و مرز تفسیر
 
 تابع create_sensor_model در [Hamiltonian](../rydberg_aoa/physics/hamiltonian/create_sensor_model.py) مدل چهارترازی ground → excited → rydberg1 ↔ rydberg2 را در RWA و با ℏ=1 می‌سازد. حل Lindblad و تبدیل coherence پروب به transmission ورودی پردازش IF را فراهم می‌کند. مدل معمول یک کانال مغناطیسی آماده‌شده را فرض می‌کند؛ توزیع جمعیت همهٔ زیرترازها را از فرایند آماده‌سازی پیش‌بینی نمی‌کند.
