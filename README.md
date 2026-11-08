@@ -32,6 +32,8 @@ py -3.11 -m venv .venv
 
 ## آزمون و توسعه
 
+نمونهٔ فنی رابط دسکتاپ انگلیسی نیز با `python -m raqs_gui` در دسترس است؛ نصب اختیاری، دامنهٔ محدود و آزمون آن در [راهنمای GUI](docs/gui.md) آمده‌اند. این رابط مدل فیزیکی را تغییر نمی‌دهد.
+
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest tests/test_lab006_live_entrypoint.py -q -rA -s
 ```
