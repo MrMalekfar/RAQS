@@ -1,16 +1,19 @@
-# محصول RAQS
+# RAQS Research Workbench
 
-این فایل زمینهٔ محصول رابط را نگه می‌دارد؛ قرارداد علمی در AGENTS.md و source است.
+RAQS is research software for simulating Rydberg atomic sensing, heterodyne IF measurements, and array angle-of-arrival estimation. The desktop workbench serves researchers who need to configure, inspect, run and revisit a traceable simulation.
 
-- مخاطب: پژوهشگر یا توسعه‌دهندهٔ شبیه‌سازی حسگر اتمی ریدبرگ.
-- کار اصلی رابط: انتخاب پروفایل، بررسی فیزیک، اجرای مستقل و مشاهدهٔ نتیجهٔ قابل ردیابی.
-- زبان رابط: انگلیسی؛ مستندات آموزشی مخزن: فارسی.
-- پلتفرم نمونهٔ فنی: دسکتاپ محلی، ابتدا Windows؛ انتخاب PySide6 بر اساس پلن مورد قبول کاربر.
-- پشتهٔ فعلی: PySide6-Essentials / Qt Widgets؛ مدل و solver همان Python موجود.
-- دامنهٔ نمونه: ساخت پروفایل از الگوی موجود، فرم ورودی و JSON Preview همگام، import، diagnostics و sensing تک‌اجرا، گزارش و PNGهای موجود.
-- محدودیت: ویرایشگر جامع، study، نمودار تعاملی و installer هنوز ارائه نشده‌اند.
-- اصل ثابت: GUI نباید فرمول یا قواعد علمی را دوباره تعریف کند؛ شکست فیزیک موفقیت معرفی نمی‌شود.
+## Confirmed product constraints
 
-معیار موفقیت: دو اجرای مستقل بدون نشت وضعیت اتمی، حفظ snapshot ورودی، پاسخ‌گویی پنجره و برابری نتیجه با CLI برای ورودی یکسان.
+- Local desktop application, initially verified on Windows; PySide6 / Qt Widgets remains the UI platform.
+- English interface and GUI documentation. Existing scientific and project documents retain their own scope.
+- The canonical profile parser and physics APIs own scientific validation. Qt is optional and never imported by the core or CLI.
+- Inputs may be created from explicit example templates or imported from JSON. Unsaved drafts, current execution snapshots and saved results are distinct.
+- Ordinary AoA and IF-only calculations use a fresh Python process for each job. This is numerical research software, not experimental certification.
+- Study and magnetic-core documents can be edited, but their execution is explicitly unavailable in this GUI. No implicit fallback model is allowed.
+- Windows offers an explicit forced Stop with verified owned-process cleanup. Graceful solver cancellation, non-Windows stopping, installer, web service and multiuser operation are not claimed.
 
-جزئیات دامنه در [راهنمای GUI](docs/gui.md) و مراحل آینده در [طرح توسعه](docs/gui-plan.md) است.
+## Success criteria
+
+A researcher can start without a personal JSON file; edit scientific inputs without losing precision; identify why a draft is not runnable; execute diagnostics or a measurement without freezing the UI; and reopen a verified result with its actual method, units and model limitations.
+
+See [the user guide](docs/gui.md), [the design system](DESIGN.md) and [architecture and remaining work](docs/gui-plan.md).

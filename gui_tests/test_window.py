@@ -17,7 +17,7 @@ def test_profile_state_rejects_invalid_input_and_active_window_close(tmp_path):
     window.show()
     app.processEvents()
     assert 'DejaVu Sans' in QFontDatabase.families()
-    assert not window.sensing_button.isEnabled()
+    assert window.sensing_button.isEnabled()
     window.load_profile(ROOT / 'examples/lab006/prescribed_reference.json')
     assert window.diagnostic_button.isEnabled()
     assert not window.sensing_button.isEnabled()

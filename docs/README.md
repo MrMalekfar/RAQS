@@ -2,7 +2,7 @@
 
 [شروع](../README.md) · [اجرا و خروجی](usage.md) · [مثال‌ها](../examples/README.md) · [آزمون‌ها](../tests/README.md) · [معماری](../architecture.md)
 
-[راهنمای نمونهٔ فنی GUI](gui.md) نصب و دامنهٔ رابط انگلیسی موجود را توضیح می‌دهد. [طرح توسعهٔ GUI](gui-plan.md) مراحل بعد را نگه می‌دارد؛ تمام قابلیت‌های طرح هنوز پیاده نشده‌اند.
+The English [Research Workbench guide](gui.md), [architecture and roadmap](gui-plan.md), and [verification report](gui-verification.md) describe the implemented desktop workflow and its explicit limits.
 
 ## مدل و مرز تفسیر
 
