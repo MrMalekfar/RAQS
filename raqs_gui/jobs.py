@@ -5,17 +5,64 @@ from pathlib import Path
 import tempfile
 
 
-def parse_snapshot(raw):
+def auxiliary_document(raw, source, repository):
+    """Describe research metadata; never invent or convert a physical profile."""
+    document = json.loads(raw.decode('utf-8-sig'))
+    if not isinstance(document, dict) or 'mode' in document or 'fields' in document:
+        return None
+    if not ({'task', 'campaign', 'study', 'production_sha256'} & document.keys()
+            or Path(source).name in ('design.json', 'design_v2.json', 'manifest.json', 'profile_manifest.json', 'input_manifest.json', 'source_guard.json', 'validation_evidence.json')):
+        return None
+    references = []
+    def visit(value):
+        if isinstance(value, dict):
+            for child in value.values():
+                visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+        elif isinstance(value, str) and value.endswith('.json'):
+            references.append(value)
+    visit(document)
+    profiles, missing = [], []
+    for reference in dict.fromkeys(references):
+        reference_path = Path(reference)
+        candidates = [reference_path] if reference_path.is_absolute() else [Path(source).parent / reference_path, Path(repository) / reference_path]
+        existing = next((p for p in candidates if p.is_file()), None)
+        if existing is None:
+            missing.append(reference)
+            continue
+        try:
+            candidate = json.loads(existing.read_text(encoding='utf-8-sig'))
+        except (OSError, ValueError):
+            continue
+        if isinstance(candidate, dict) and 'fields' in candidate and 'mode' in candidate:
+            profiles.append(existing.resolve())
+    message = ('This JSON is a research design, manifest or evidence document, not a run profile. '
+               'A run profile must declare mode, fields and its atomic preparation/ladder. No automatic conversion was applied.')
+    if profiles:
+        message += ' Use Choose Referenced Profile to open a declared input.'
+    if missing:
+        message += ' Missing referenced JSON files: ' + ', '.join(missing[:4])
+    if not profiles:
+        message += ' The original research workflow may require tools or input files not present in this checkout.'
+    return message, list(dict.fromkeys(profiles))
+
+
+def load_snapshot(raw):
     # Use the canonical strict loader on the exact bytes shown by the UI.
     from rydberg_aoa.config.run_profile import load_run_profile
     with tempfile.TemporaryDirectory(prefix='raqs-profile-') as temporary:
         path = Path(temporary) / 'profile.json'
         path.write_bytes(raw)
         profile = load_run_profile(path)
+    return profile
+
+
+def parse_snapshot(raw):
+    profile = load_snapshot(raw)
     if profile.study is not None or profile.magnetic_core is not None:
         raise ValueError('This prototype supports ordinary single profiles only; study and magnetic-core profiles are not executed.')
-    if profile.measurement is not None and profile.measurement.mode != 'aoa':
-        raise ValueError('This prototype supports AoA profiles only; IF-only results require a separate viewer.')
     return profile
 
 
@@ -47,6 +94,8 @@ def digest(path):
 def read_result(directory):
     """Only GUI manifests with complete, unmodified files are accepted."""
     directory = Path(directory)
+    if (directory / 'interrupted.json').exists():
+        raise ValueError('This run was interrupted. Its partial artifacts are not a completed result.')
     manifest = json.loads((directory / 'manifest.json').read_text(encoding='utf-8'))
     if type(manifest.get('schema_version')) is not int or manifest['schema_version'] != 1 or manifest.get('state') != 'completed':
         raise ValueError('Unsupported or incomplete GUI run manifest.')

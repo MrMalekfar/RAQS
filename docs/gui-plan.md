@@ -1,132 +1,39 @@
-# طرح توسعهٔ رابط گرافیکی RAQS
+# GUI architecture and remaining work
 
-وضعیت: طرح مبنای توسعه؛ اکنون [نمونهٔ فنی GUI](gui.md) بخشی از گردش کار را پیاده می‌کند و تمام این طرح قابلیت موجود نیست. مبنای بررسی کد، commit `7866aec` در ۲۰۲۶-۱۱-۰۸ است. این سند قابلیت تازه‌ای برای موتور شبیه‌سازی اعلام نمی‌کند.
+This document separates the implemented desktop architecture from future work. The active user guide is [gui.md](gui.md); visual conventions are in [DESIGN.md](../DESIGN.md).
 
-[شروع پروژه](../README.md) · [فرض‌های پژوهشی](README.md) · [قرارداد اجرا و خروجی](usage.md) · [معماری فعلی](../architecture.md)
-
-## هدف و تصمیم‌های پایه
-
-هدف، فراهم‌کردن محیط کار پژوهشی برای انتخاب پروفایل، بررسی تنظیمات فیزیکی، اجرای شبیه‌سازی و تفسیر نتیجه است. مخاطب، پژوهشگر یا توسعه‌دهنده‌ای است که می‌خواهد بدون کار مستقیم با CLI یک اجرای قابل ردیابی انجام دهد.
-
-زبان رابط، پیام‌های محصول و عنوان صفحه‌ها انگلیسی خواهد بود؛ مستندات آموزشی این مخزن فارسی می‌مانند. نام پارامترها و واحدها با کد سازگار می‌مانند. اعداد، مسیرها و عبارت‌های فیزیکی در رابط انگلیسی نمایش داده می‌شوند.
-
-انتخاب فنی پیشنهادی، دسکتاپ محلی با PySide6 و Qt Widgets، ابتدا روی Windows، و نمودارهای Matplotlib موجود است. این انتخاب برای بارکاری محلی و ساختار Python فعلی است؛ تعهد به پشتیبانی آزموده‌شده از سیستم‌عامل دیگر نیست. [راهنمای رسمی Qt](https://doc.qt.io/qtforpython-6/overviews/qtdoc-topics-ui.html) و [نمونهٔ رسمی Matplotlib](https://doc.qt.io/qtforpython-6/examples/example_external_matplotlib_widget_gaussian.html) پشتوانهٔ امکان ترکیب این ابزارها هستند؛ سازگاری بسته‌بندی RAQS هنوز باید آزمایش شود.
-
-در مرحلهٔ تدوین این طرح فقط مستندات تغییر کردند؛ پیاده‌سازی نمونهٔ فنی در شاخهٔ جدا انجام می‌شود. در پیاده‌سازی، افزودن فایل‌های مستقل اولویت دارد. اگر اتصال صحیح به اصلاح فایل موجود نیاز داشت، دامنه و دلیل آن باید پیش از آن تغییر مشخص شود. فرمول، مدل فیزیکی، baseline، seed و tolerance برای ساخت GUI تغییر نمی‌کنند.
-
-## نسخهٔ اول: یک گردش کار کامل
-
-نسخهٔ اول شامل بازکردن پروفایل موجود، نمایش ورودی‌ها، ذخیرهٔ کپی بدون بازنویسی مبدأ، diagnostics، اجرای تک‌پروفایل، نمایش گزارش و نمودارهای مرتبط و بازکردن نتیجهٔ ذخیره‌شده است. هم‌زمان فقط یک job اجرا می‌شود.
-
-نسخهٔ فعلی فرم ویرایش مقادیر پروفایل و شروع از الگو دارد؛ import JSON کنترل‌ها را بازسازی می‌کند و تغییر فرم به پیش‌نمایش و ورودی اجرا منتقل می‌شود. ویرایش ساختاری جامع (مانند تغییر تعداد اعضای آرایه یا افزودن بلوک اختیاری) هنوز ارائه نشده است. تغییر فایل روی دیسک نباید ورودی اجرای فعال را عوض کند. نمونهٔ ذخیره‌شدهٔ ورودی هر اجرا مستقل است.
-
-study و مسیرهای تخصصی از روی فایل شناسایی و با دلیل روشن خارج از دامنهٔ نسخهٔ اول اعلام می‌شوند؛ به تک‌اجرا یا مدل ساده‌تر تبدیل نمی‌شوند. برای نسخهٔ اول، پروفایل‌های آغازین LAB-006 و سپس تک‌پروفایل‌های منتخب LAB-007 مجموعهٔ پذیرش خواهند بود. این محدودسازی، محدودیت GUI است و به معنی حذف قابلیت هسته نیست.
-
-موارد خارج از دامنهٔ نسخهٔ اول: وب چندکاربره، حساب کاربری، سرور محاسباتی، چند اجرای هم‌زمان، ویرایش همهٔ مدل‌ها، توقف اجباری solver و چارچوب پلاگین برای مدل‌های فرضی آینده. اضافه‌کردن هرکدام نیاز به کاربرد مشخص دارد.
-
-## پشتوانهٔ موجود در کد
-
-| نیاز GUI | مسیر و تابع موجود | محدودیت فعلی |
-| --- | --- | --- |
-| خواندن و parse پروفایل | [run_profile.py](../rydberg_aoa/config/run_profile.py)، `load_run_profile` و `parse_run_profile` | parse موفق، اعتبار همهٔ محاسبات ARC و solver را ثابت نمی‌کند |
-| نمایش/صدور مدل پیکربندی | [profile_document.py](../rydberg_aoa/config/profile_document.py)، `profile_document` | بازسازی معنایی است؛ حفظ قالب، ترتیب کلید یا بایت‌های فایل اصلی تضمین نشده است |
-| اجرای تشخیصی و sensing | [profile_execution.py](../rydberg_aoa/simulation/profile_execution.py)، `execute_profile` | runtime اتمی حالت دارد؛ اجرای تازه در همان runtime منتشرشده رد می‌شود |
-| خروجی آرایه‌ها | همان فایل، `save_profile_results` | قرارداد IF-only و AoA متفاوت است؛ همهٔ کلیدها همیشه حاضر نیستند |
-| study و پیشرفت | [study_execution.py](../rydberg_aoa/simulation/study_execution.py)، `execute_study` | callback در thread فراخوان اجرا می‌شود؛ لغو بین jobهاست |
-| کشف قابلیت‌ها | [study.py](../rydberg_aoa/config/study.py)، `study_capabilities` و [atom_species.py](../rydberg_aoa/config/atom_species.py)، `species_capabilities` | قرارداد جامع برای تولید خودکار همهٔ فرم‌های GUI نیست |
-| ساخت شکل‌ها | [profile_figures.py](../rydberg_aoa/visualization/profile_figures.py) | سازگاری figureها با پنجرهٔ embedded باید در نمونهٔ فنی اثبات شود |
-
-## معماری اتصال
+## Implemented architecture
 
 ```text
-Qt views / controller
-        |
-        v
-GUI run manager
-        |
-        v
-فرایند تازهٔ Python برای تک‌اجرا
-        |
-        v
-load_run_profile -> execute_profile -> writerهای موجود
-        |
-        v
-گزارش، آرایه‌ها و وضعیت تکمیل -> نمایش نتیجه
+Qt workbench / task-oriented editor
+    -> canonical profile parsing and fixed byte snapshot
+    -> QProcess: fresh Python worker
+    -> execute_profile / existing result and figure writers
+    -> complete artifact receipt
+    -> background receipt/hash verification
+    -> measurement summary, saved figures and original report
 ```
 
-GUI نباید `parameters` یا `atomic_config` را برای تنظیم فیزیک مستقیماً تغییر دهد. مسیر تنظیم از همان پروفایل و seam موجود عبور می‌کند. اعتبارسنجی علمی در هسته می‌ماند؛ رابط برای توضیح و جایابی خطا اطلاعات نمایشی اضافه می‌کند، نه نسخهٔ دوم قواعد علمی.
+The UI owns presentation, draft state, file selection and process lifecycle. The core owns scientific validation, atomic resolution and numerical execution. No scientific rules, fallback atomic channels or Qt imports were added to the core. Rendering consumes completed outputs and is not run in the UI thread as part of the solver.
 
-مدیریت پنجره نباید ARC یا solver را در thread اصلی اجرا کند. برای تک‌اجرا، یک فرایند تازه با همان Python محیط برنامه پیشنهاد می‌شود؛ مستقل‌بودن آن مانع نشت وضعیت اتمی بین اجراهاست. از اجرای فایل‌های اصلی پروژه از طریق shell و ساختن فرمان رشته‌ای اجتناب می‌شود. entry point جدید فقط orchestration، پیام و ذخیره را انجام می‌دهد؛ محاسبه را به API موجود می‌سپارد.
+## Configuration contract
 
-فرایند اجرا باید امکان ساخت workerهای spawn فعلی را داشته باشد و daemon نباشد. در نسخهٔ study، جداسازی موجود `execute_study` حفظ می‌شود؛ لایه‌های multiprocessing تازه بدون نیاز اضافه نمی‌شوند. بسته‌بندی و چرخهٔ فرایندهای فرزند از گیت‌های نمونهٔ فنی هستند.
+The editor represents one draft. JSON preview, Save As and the run snapshot read from that same draft; an invalid edit clears the executable snapshot. Import rebuilds controls. Unhandled composite values are preserved and remain accessible in Advanced structure. Optional effects are copied only from a selected explicit example or edited in the tree; no valid-looking physical parameters are invented.
 
-پیام‌های وضعیت از log جدا خواهند بود؛ stdout فعلی برنامه JSON خالص فرض نمی‌شود. در نسخهٔ اول، کانال وضعیت فقط job ID، مرحله، نتیجه یا خطا و مسیر خروجی را حمل می‌کند؛ آرایه‌های بزرگ از فایل خوانده می‌شوند. قرارداد پیام‌ها نسخهٔ مشخص دارد. UI تنها در thread اصلی به‌روز می‌شود و پیام دیررس اجرای قبلی، نتیجهٔ job جدید را تغییر نمی‌دهد.
+Original file bytes are preserved before edits. After edits JSON formatting may change. Source files, baselines and prior outputs are not overwritten by normal GUI operations.
 
-هیچ import از PySide6 نباید وارد هسته شود. وابستگی GUI اختیاری و مجزا نگه داشته می‌شود تا نصب و آزمون CLI به Qt وابسته نشود. انتخاب نسخهٔ PySide6 و ابزار بسته‌بندی هنگام نمونهٔ فنی و با توجه به Python و وابستگی‌های نصب‌شده انجام می‌شود.
+## Execution and result contract
 
-## صفحه‌ها و رفتار مورد انتظار
+Ordinary AoA and IF-only profiles use execute_profile in an independent process. Diagnostics is a distinct operation. Windows jobs establish an owned process group before physics startup; Stop terminates that group and waits for cleanup. Interrupted folders are explicitly rejected. A job is not accepted as completed merely because the solver returned: array/figure/report writing and the final receipt must succeed. The visible eligibility line distinguishes editable/parsed/runnable state and whether the current input matches a displayed verified result.
 
-| صفحه | محتوای اصلی | رفتار مهم |
-| --- | --- | --- |
-| `Profiles` | مسیر فایل، mode/schema، گونه، خلاصهٔ میدان‌ها و JSON خواندنی | `Open Profile`، `Reload` و `Save Copy`؛ نمایش واضح پروفایل خارج از دامنه |
-| `Diagnostics` | ورودی اعلام‌شده در کنار دادهٔ حل‌شده، ترازها، detuning، Rabi و فرض‌ها | تشخیص از sensing جداست؛ خطای ARC با تنظیمات معتبر جایگزین نمی‌شود |
-| `Run` | پروفایل ثابت اجرا، مقصد، مرحله، زمان سپری‌شده و log | جلوگیری از اجرای تکراری؛ پرهیز از درصد یا زمان باقی‌ماندهٔ ساختگی |
-| `Results` | گزارش، نمودار، واحدها و اطلاعات اجرای ذخیره‌شده | فقط نمودار موجود/معتبر؛ نبود طیف برای روش search-free خطا نیست |
+Opening and verifying saved artifacts happens outside the UI thread. A generation token prevents a late read from replacing results after the input changes. Scientific image zoom/export does not recompute data. Missing curves, unavailable angles and unexecuted effects are not fabricated.
 
-رابط باید آرام، خوانا و مناسب کار طولانی باشد: چیدمان پایدار، اندازه‌پذیری پنجره، پیمایش با keyboard، focus قابل مشاهده و وضعیت‌هایی که فقط با رنگ مشخص نمی‌شوند. واحد کنار مقدار نمایش داده می‌شود. مقادیر بسیار کوچک با scientific notation قابل خواندن می‌مانند و گردکردن نمایشی نباید وارد دادهٔ ذخیره‌شده شود. رنگ و فونت نهایی پس از نمونهٔ تعاملی تعیین می‌شوند؛ این سند هنوز طرح بصری نهایی نیست.
+## Remaining work, not current capabilities
 
-ترتیب کار معمول: بازکردن پروفایل ← parse ← diagnostics اختیاری ← انتخاب مقصد تازه ← اجرا ← بررسی نتیجه. diagnostics اجباری نیست و جای validation خود اجرای اصلی را نمی‌گیرد. تغییر پروفایل پس از diagnostics، نتیجهٔ تشخیصی قبلی را با برچسب stale مشخص می‌کند.
+- Study and magnetic-core execution require explicit routing and measurement-specific result review; until then they remain visibly unavailable in this GUI.
+- Windows forced Stop is implemented and tested with descendants and an unrelated process. Graceful solver/study cancellation and non-Windows stopping remain separate work.
+- A standalone Windows package requires a separate ARC data, spawn, font and clean-machine validation pass.
+- Numerical interactive plots may be added using saved arrays, independently of solver execution. Current figure zoom is image navigation only, with Fit Page and a focus mode.
+- Exhaustive native keyboard/pointer, assistive-technology and Windows scaling verification remain release gates. Other operating systems require independent validation.
 
-## وضعیت اجرا، لغو و خطا
-
-وضعیت‌های پیشنهادی job: `starting`، `running`، `saving` و یکی از وضعیت‌های نهایی `completed`، `failed` یا `interrupted`. حالت پنجرهٔ بدون اجرا با `idle` مشخص می‌شود. اگر ذخیره شکست بخورد، job کامل و قابل بایگانی معرفی نمی‌شود، حتی اگر solver پایان یافته باشد.
-
-نسخهٔ اول توقف اجباری تک‌اجرا ارائه نمی‌کند؛ هنگام بستن پنجرهٔ اجرای فعال، گزینهٔ ماندن و انتظار یا بازگشت به برنامه ارائه می‌شود. crash یا پایان خارجی فرایند `interrupted` است و موفقیت محسوب نمی‌شود. پاک‌سازی workerهای فرزند پس از crash باید پیش از انتشار بررسی شود؛ promise توقف فوری بدون این بررسی مجاز نیست.
-
-در مرحلهٔ study، دکمهٔ `Cancel After Current Job` با callback فعلی پیاده می‌شود و وضعیت `cancelling` تا مرز امن باقی می‌ماند. رفتار لغو و نتیجهٔ جزئی هر نوع study مستقلاً بررسی می‌شود؛ قرارداد نوع دیگر به آن تعمیم داده نمی‌شود.
-
-خطاها در سه دستهٔ parse/configuration، physics/ARC/solver و filesystem/process نمایش داده می‌شوند. پیام کوتاه باید اقدام بعدی را روشن کند و جزئیات فنی و cause chain قابل مشاهده/ذخیره باشند. خطا یا نبود خروجی نباید با نتیجهٔ قبلی پوشانده شود.
-
-## ذخیره و بازتولیدپذیری
-
-برای هر اجرا پوشهٔ تازه ساخته می‌شود. قبل از شروع، مقصد قابل نوشتن بررسی می‌شود؛ این بررسی جای مدیریت خطای واقعی زمان نوشتن را نمی‌گیرد. فایل مبدأ و baselineها بازنویسی نمی‌شوند.
-
-در کنار خروجی‌های موجود، لایهٔ GUI باید کپی ورودی دقیق، SHA-256 آن، نسخهٔ قرارداد GUI، زمان اجرا با timezone، نسخهٔ Python و بسته‌ها و در صورت وجود commit/dirty state را نگه دارد. اگر Git در بستهٔ نصب‌شده موجود نباشد، نسخهٔ build ذخیره و اطلاعات ناموجود صریح اعلام می‌شود؛ شناسه ساخته نمی‌شود. گزارش ARC و seed/تنظیمات مؤثر موجود نیز حفظ می‌شوند.
-
-فایل ورودی دقیق برای اثبات «چه چیزی اجرا شد» مرجع است؛ `profile_document` برای صدور معنایی و ویرایشگر آینده استفاده می‌شود. محدودیت round-trip آن با آزمون مشخص می‌شود و exporter نباید تنظیم ناشناخته را بی‌صدا حذف کند. schema آیندهٔ پشتیبانی‌نشده به‌صورت خطا یا نمایش خواندنیِ صریح باقی می‌ماند و دوباره به نسخهٔ فعلی ذخیره نمی‌شود.
-
-GUI یک manifest کوچک متعلق به خودش را فقط پس از ذخیرهٔ موفق همهٔ فایل‌های ضروری با وضعیت نهایی می‌نویسد. reader باید خروجی ناقص را تشخیص دهد و برای گزارش یا آرایهٔ ناقص پیام بدهد. بارگذاری NPZ بدون pickle انجام می‌شود؛ ابعاد، کلیدها و واحدهای لازم پیش از رسم کنترل می‌شوند. تغییر schema خروجی به capabilityهای نمایش نگاشت می‌شود، نه تولید منحنی یا مقدار جایگزین.
-
-## مراحل پیاده‌سازی و گیت پذیرش
-
-| مرحله | تحویل | شرط ادامه |
-| --- | --- | --- |
-| ۱. نمونهٔ فنی اتصال | پنجرهٔ ساده و یک اجرای diagnostics و sensing در فرایند مستقل | دو اجرای متوالی بدون نشت runtime، پنجرهٔ پاسخ‌گو، جمع‌شدن workerها و نمایش خطای واقعی ARC |
-| ۲. گردش کار کامل | چهار صفحهٔ نسخهٔ اول، ذخیره و بازکردن نتیجه | ورودی اجرا ثابت بماند؛ خطای ذخیره، crash و خروجی ناقص با موفقیت اشتباه نشوند |
-| ۳. کیفیت نسخهٔ اول | چیدمان منسجم، واحدها، keyboard، اندازه‌پذیری و پیام‌های خطا | بررسی عملی روی اندازه‌های هدف و Windows scaling؛ CLI به Qt وابسته نشود |
-| ۴. انتشار آزمایشی | نصب اختیاری توسعه و بستهٔ اجرایی آزمایشی Windows | بررسی روی محیط تازه، مسیر دارای فاصله/حروف غیراَسکی، ARC user data و spawn؛ محدودیت‌ها مستند شوند |
-| ۵. ویرایش و study | فرم‌های تدریجی و مطالعه‌های منتخب | round-trip، وابستگی پارامترها، progress/cancel و provenance هر مسیر آزموده شوند |
-
-ساختار پیشنهادی اولیه یک پوشهٔ مستقل `raqs_gui/` برای entry point، پنجره‌ها، run manager و worker entry است. این مسیر هنوز وجود ندارد؛ زیرماژول‌ها فقط با نیاز واقعی جدا می‌شوند. آزمون‌های GUI از آزمون هسته جدا شناسایی می‌شوند؛ ابزار تست Qt تنها هنگام پیاده‌سازی نیازمند انتخاب و نصب است.
-
-مجموعهٔ پذیرش باید شامل تطبیق گزارش و آرایهٔ GUI/CLI برای ورودی یکسان، دو اجرای متوالی، پروفایل نامعتبر، نبود دسترسی ARC، خطای نوشتن مقصد، خروج فرایند پیش از اتمام، پنجرهٔ نتیجهٔ بدون spectrum و حفظ snapshot ورودی باشد. مقایسه با معیار عددی موجود انجام می‌شود؛ tolerance جدید برای پوشاندن اختلاف ساخته نمی‌شود. برای نمودارها هم داده و واحد و هم رفتار تعاملی بررسی می‌شوند.
-
-آزمون واقعی ARC و spawn با fixture مصنوعی جایگزین نمی‌شود. تست مصنوعی برای state machine و خطاهای reader مناسب است. fail، skip و شکست محیطی جدا گزارش می‌شوند. نصب محیط تازه و بستهٔ اجرایی، دو بررسی جدا از اجرای موفق در محیط توسعه‌اند.
-
-## نگهداری هنگام توسعهٔ مدل
-
-هنگام افزودن پارامتر یا اثر به هسته، ابتدا parser و رفتار علمی و آزمون آن تثبیت می‌شود؛ سپس قابلیت و metadata نمایشی مورد نیاز، serialization و نمایش نتیجه به‌روزرسانی می‌شوند. واحد و مقدار پیش‌فرض GUI از قرارداد مدل می‌آیند؛ ترجمهٔ واحد در یک مرز مشخص انجام می‌شود.
-
-فرم‌های پیچیدهٔ علمی اختصاصی می‌مانند؛ از dataclassها انتظار تولید خودکار یک GUI کامل نداریم. metadata کوچکِ عنوان/واحد/راهنما در لایهٔ رابط مجاز است، اما محدودیت فیزیکی نباید دو بار تعریف شود. دادهٔ مدل جدید در صورت عدم پشتیبانی خواندنی یا صریحاً مسدود می‌ماند.
-
-مرز مستقل اجرا می‌تواند در آینده پشت رابط وب قرار بگیرد؛ migration خودکار UI تضمین نمی‌شود. تصمیم وب فقط با نیاز واقعی به دسترسی راه دور یا چندکاربره باز می‌شود و آن زمان نیازهای صف، منابع، امنیت و جداسازی کاربران جدا طراحی می‌شوند. اکنون شبکه، سرویس و پایگاه داده اضافه نمی‌شوند.
-
-## ابزارها و تصمیم‌های باز
-
-PySide6 وابستگی آیندهٔ GUI است، نه پلاگین Codex. Matplotlib از قبل موجود است. نصب افزونهٔ تازه برای شروع لازم نیست؛ Impeccable برای UX، Ponytail برای کنترل دامنه، Codebase Memory برای ساختار، Context7 برای API و Computer Use برای بررسی عملی قابل استفاده‌اند. Figma فقط در صورت نیاز به طراحی مشترک و قابل ویرایش اضافه می‌شود. skill اختصاصی RAQS GUI پس از اثبات اولین گردش کار می‌تواند قراردادهای واقعی را ثبت کند؛ پیشاپیش چارچوب اجباری ساخته نمی‌شود.
-
-تصمیم‌های باقی‌مانده در نمونهٔ فنی: نسخهٔ سازگار PySide6، ابزار بسته‌بندی، سازگاری figureهای موجود با embedding و پاک‌سازی فرایندهای فرزند. طراحی بصری نهایی پس از مشاهدهٔ نمونهٔ واقعی انتخاب می‌شود. هیچ‌کدام مانع تهیهٔ این طرح نیستند، اما پیش از ادعای آماده‌بودن GUI باید حل و آزموده شوند.
-
-## بررسی تحویل اولیهٔ طرح
-
-تحویل اولیهٔ طرح فقط همین سند و لینک آن در فهرست مستندات است. مسیرها و ادعاهای مرزی با source و ساختار Codebase Memory تطبیق داده شدند. لینک‌های محلی، fenceهای Markdown و diff/whitespace بررسی می‌شوند؛ نتیجهٔ واقعی آن‌ها در گزارش تحویل ذکر می‌شود. آزمون GUI، نصب PySide6، اجرای solver و بسته‌بندی در این مرحله انجام نمی‌شوند، چون پیاده‌سازی یا تغییر اجرایی وجود ندارد.
+Do not add a web service, plugin framework, schema abstraction or new dependency until a concrete requirement justifies it. Adding a model input starts with its core parser/tests; the GUI then adds labels, units, controls and result presentation for the supported contract.

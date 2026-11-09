@@ -6,7 +6,7 @@ import math
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox, QFormLayout, QGroupBox, QLabel, QLineEdit, QScrollArea,
-    QTableWidget, QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QStackedWidget, QPushButton, QHBoxLayout,
 )
 
 
@@ -28,7 +28,29 @@ def number(text):
     return value
 
 
-class ProfileEditor(QTabWidget):
+SECTION_NAMES = {'General': 'Profile contract', 'RF local oscillator': 'RF Local Oscillator', 'RF signal': 'RF Signal',
+    'lo_phase_reference': 'LO phase reference', 'atom': 'Atom & isotope', 'preparation': 'Prepared channel',
+    'ladder': 'Prepared atomic states', 'execution': 'Array & acquisition', 'bounds': 'Hardware search limits',
+    'environment': 'Thermal & relaxation', 'spectrum': 'EIT spectrum', 'noise': 'Noise & detector',
+    'numerics': 'Solver controls', 'temporal_doppler': 'Temporal Doppler', 'radiative': 'Radiative rates',
+    'measurement': 'Measurement mode', 'quantization_axis': 'Quantization axis', 'provenance': 'Input provenance',
+    'study': 'Parameter study (execution unavailable)', 'magnetic_core': 'Magnetic core (execution unavailable)'}
+
+
+def field_label(key):
+    exact = {'f': 'F', 'mf': 'mF', 'j': 'j', 'mj': 'mJ', 'n': 'n', 'l': 'l',
+             'beam_waist_mm': 'Beam radius (1/e² intensity)', 'polarization': 'Polarization q',
+             'rydberg1_mj': 'Rydberg 1 mJ', 'rydberg2_mj': 'Rydberg 2 mJ'}
+    if key in exact:
+        return exact[key]
+    for suffix in ('_per_us', '_mhz', '_hz', '_nm', '_mw', '_mm', '_us', '_deg', '_m', '_k', '_vm'):
+        if key.endswith(suffix):
+            key = key[:-len(suffix)]
+            break
+    return key.replace('_', ' ').capitalize()
+
+
+class ProfileEditor(QWidget):
     changed = Signal()
 
     def __init__(self):
@@ -37,43 +59,55 @@ class ProfileEditor(QTabWidget):
         self.readers = {}
         self.controls = {}
         self.default_atom = None
+        self.errors = {}
+        layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0)
+        self.sections = QComboBox(); self.sections.setAccessibleName('Scientific configuration section')
+        self.pages = QStackedWidget(); self.sections.currentIndexChanged.connect(self.pages.setCurrentIndex)
+        layout.addWidget(self.sections); layout.addWidget(self.pages, 1)
 
     def clear_profile(self):
-        while self.count():
-            page = self.widget(0)
-            self.removeTab(0)
+        self.sections.clear()
+        while self.pages.count():
+            page = self.pages.widget(0)
+            self.pages.removeWidget(page)
             page.deleteLater()
         self.document = None
         self.readers = {}
         self.controls = {}
         self.default_atom = None
+        self.errors = {}
 
     def load_document(self, document):
         self.clear_profile()
         self.document = copy.deepcopy(document)
-        sections = [('General', {key: value for key, value in document.items()
-                                 if not isinstance(value, (dict, list))})]
-        sections.extend((key, value) for key, value in document.items() if isinstance(value, (dict, list)))
+        sections = [('General', (), {key: value for key, value in document.items() if not isinstance(value, (dict, list))})]
+        for key, value in document.items():
+            if key == 'fields':
+                sections.extend((title, ('fields', role), value[role]) for role, title in (
+                    ('probe', 'Probe laser'), ('coupling', 'Coupling laser'), ('lo', 'RF local oscillator'), ('signal', 'RF signal')))
+            elif isinstance(value, (dict, list)):
+                sections.append((key, (key,), value))
         if 'atom' not in document:
             from rydberg_aoa.config.atom_species import LEGACY_ATOM
             self.default_atom = {'species': LEGACY_ATOM.species, 'isotope_fraction': LEGACY_ATOM.isotope_fraction}
-            sections.append(('atom', self.default_atom))
-        for name, value in sections:
+            sections.append(('atom', ('atom',), self.default_atom))
+        for name, path, value in sections:
             page = QWidget()
             form = QFormLayout(page)
             form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
             form.setContentsMargins(16, 16, 16, 16)
             if name == 'General':
                 for key, scalar in value.items():
-                    form.addRow(key, self.make_control((key,), scalar))
+                    form.addRow(field_label(key), self.control_row((key,), scalar))
             else:
-                self.add_fields(form, (name,), value)
+                self.add_fields(form, path, value)
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
             scroll.setWidget(page)
-            self.addTab(scroll, name.replace('_', ' ').title())
-        if self.count() > 1:
-            self.setCurrentIndex(1)
+            self.sections.addItem(SECTION_NAMES.get(name, name.replace('_', ' ').title()))
+            self.pages.addWidget(scroll)
+        if self.pages.count() > 1:
+            self.sections.setCurrentIndex(1)
 
     def add_fields(self, form, path, value):
         if isinstance(value, dict):
@@ -85,10 +119,46 @@ class ProfileEditor(QTabWidget):
                     self.add_fields(nested, child_path, child)
                     form.addRow(group)
                 else:
-                    form.addRow(key + (f' [{unit_for(child_path)}]' if unit_for(child_path) else ''),
-                                self.make_control(child_path, child))
+                    form.addRow(field_label(key) + (f' [{unit_for(child_path)}]' if unit_for(child_path) else ''),
+                                self.control_row(child_path, child))
         else:
-            form.addRow(self.make_control(path, value))
+            form.addRow(self.control_row(path, value))
+
+    def control_row(self, path, value):
+        control = self.make_control(path, value)
+        wrapper = QWidget(); layout = QVBoxLayout(wrapper); layout.setContentsMargins(0, 0, 0, 0); layout.setSpacing(3)
+        layout.addWidget(control)
+        if isinstance(control, QTableWidget):
+            row = QHBoxLayout()
+            vector = bool(control.property('vector'))
+            duplicate = QPushButton('Duplicate value' if vector else 'Duplicate row')
+            remove = QPushButton('Remove value' if vector else 'Remove row')
+            def duplicate_row():
+                if vector:
+                    index = control.columnCount()
+                    selected = max(0, control.currentColumn())
+                    text = control.item(0, selected).text() if index else '0'
+                    control.blockSignals(True)
+                    control.insertColumn(index)
+                    control.setItem(0, index, QTableWidgetItem(text))
+                    control.blockSignals(False); self.changed.emit()
+                    return
+                previous = max(0, control.currentRow())
+                data = [control.item(previous, j).text() for j in range(control.columnCount())] if control.rowCount() else ['0'] * control.columnCount()
+                control.blockSignals(True)
+                index = control.rowCount(); control.insertRow(index)
+                for j, text in enumerate(data): control.setItem(index, j, QTableWidgetItem(text))
+                control.blockSignals(False); self.changed.emit()
+            def remove_row():
+                if vector:
+                    if control.columnCount(): control.removeColumn(max(0, control.currentColumn())); self.changed.emit()
+                elif control.rowCount(): control.removeRow(max(0, control.currentRow())); self.changed.emit()
+            duplicate.clicked.connect(duplicate_row); remove.clicked.connect(remove_row)
+            row.addWidget(duplicate); row.addWidget(remove); row.addStretch(); layout.addLayout(row)
+        error = QLabel(); error.setObjectName('fieldError'); error.setWordWrap(True); error.hide()
+        self.errors[path] = error; layout.addWidget(error)
+        control.setToolTip('.'.join(map(str, path)))
+        return wrapper
 
     def make_control(self, path, value):
         key = path[-1]
@@ -102,6 +172,8 @@ class ProfileEditor(QTabWidget):
             choices = [(name, name) for name in species_capabilities()['species']]
         elif key == 'doa_method':
             choices = [(name, name) for name in ('phase_beamforming', 'bartlett', 'mvdr', 'capon', 'music', 'esprit', 'root_music')]
+        elif path == ('measurement', 'mode'):
+            choices = [('Angle of arrival', 'aoa'), ('IF-only', 'if_only')]
         if choices is not None:
             control = QComboBox()
             for label, data in choices:
@@ -135,6 +207,7 @@ class ProfileEditor(QTabWidget):
 
     def number_table(self, path, rows, *, vector):
         table = QTableWidget(len(rows), len(rows[0]))
+        table.setProperty('vector', vector)
         table.setMinimumHeight(100)
         table.setMaximumHeight(200)
         table.horizontalHeader().setStretchLastSection(True)
@@ -142,9 +215,9 @@ class ProfileEditor(QTabWidget):
             for j, value in enumerate(row):
                 table.setItem(i, j, QTableWidgetItem(str(value)))
         def read():
-            values = [[number(table.item(i, j).text()) for j, original in enumerate(row)]
-                      for i, row in enumerate(rows)]
-            return values[0] if vector else values
+            values = [[number(table.item(i, j).text()) for j in range(table.columnCount())]
+                      for i in range(table.rowCount())]
+            return values[0] if vector and values else values
         self.readers[path] = read
         table.cellChanged.connect(lambda *_: self.changed.emit())
         return table
@@ -154,11 +227,20 @@ class ProfileEditor(QTabWidget):
             raise ValueError('Open a profile or choose New Profile first.')
         result = copy.deepcopy(self.document)
         values = {}
+        failures = []
         for path, reader in self.readers.items():
+            self.errors[path].hide()
+            self.controls[path].setProperty('invalid', False)
             try:
                 values[path] = reader()
             except (ValueError, OverflowError) as exc:
-                raise ValueError(f'{".".join(map(str, path))}: {exc}') from exc
+                failures.append(f'{".".join(map(str, path))}: {exc}')
+                self.errors[path].setText('Enter a finite number; use a decimal point or scientific notation.')
+                self.errors[path].show()
+                self.controls[path].setProperty('invalid', True)
+            self.controls[path].style().unpolish(self.controls[path]); self.controls[path].style().polish(self.controls[path])
+        if failures:
+            raise ValueError(failures[0])
         if self.default_atom is not None:
             atom = {key: values[('atom', key)] for key in self.default_atom}
             if atom != self.default_atom:

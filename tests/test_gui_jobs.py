@@ -35,8 +35,8 @@ def test_invalid_or_unsupported_inputs_create_no_run(tmp_path):
         prepare_run(tmp_path / 'absent', raw_profile(), False)
     with pytest.raises(ValueError, match='single profiles'):
         parse_snapshot((ROOT / 'examples/noise008/prescribed_readout_sweep.json').read_bytes())
-    with pytest.raises(ValueError, match='IF-only'):
-        parse_snapshot((ROOT / 'examples/noise013/prescribed_signal_pin.json').read_bytes())
+    profile = parse_snapshot((ROOT / 'examples/noise013/prescribed_signal_pin.json').read_bytes())
+    assert profile.measurement.mode == 'if_only'
 
 
 def receipt(directory, *, sensing=False):

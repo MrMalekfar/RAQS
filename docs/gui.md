@@ -1,10 +1,10 @@
-# نمونهٔ فنی GUI
+# RAQS Research Workbench
 
-این نسخه رابط دسکتاپ انگلیسی برای ساخت و ویرایش ورودی پروفایل، import JSON و اجرای مستقل diagnostics و sensing است؛ محصول کامل یا بستهٔ نصب Windows نیست. موتور فیزیکی، CLI و baselineها تغییر نکرده‌اند. [طرح توسعه](gui-plan.md) مراحل بعد را مشخص می‌کند.
+The workbench is a local English-language PySide6 desktop interface over the existing RAQS profile and simulation APIs. It improves configuration, execution visibility and measurement review without changing the physical model, units, baselines, seeds or solver tolerances.
 
-## نصب و اجرا
+## Install and launch
 
-از ریشهٔ مخزن، در محیط Python ساخته‌شده طبق [README](../README.md):
+From the repository root, using the project Python environment:
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pip install -r requirements-gui.txt
@@ -12,64 +12,71 @@
 & ./.venv/Scripts/python.exe -m raqs_gui
 ```
 
-فایل requirements-gui.txt وابستگی‌های اجرا و PySide6-Essentials نسخهٔ 6.10.3 را نصب می‌کند. Essentials شامل Qt Widgets لازم است؛ Addons برای این نمونه لازم نیست. نصب CLI همچنان به Qt وابسته نیست. برنامه از checkout اجرا می‌شود؛ installer یا بستهٔ مستقل از سورس هنوز ارائه نشده است.
+The optional GUI requirements use PySide6-Essentials 6.10.3. CLI-only installations do not need Qt. The application still runs from this checkout; no standalone installer is provided.
 
-## گردش کار
+## First complete workflow
 
-۱. در `Profiles` با انتخاب الگو و `New Profile` شروع کنید؛ import فایل شخصی لازم نیست. چهار الگو از نمونه‌های موجود LAB-006 و LAB-007 هستند و مقدار ساختگی تازه‌ای برای فیزیک تولید نمی‌کنند. گزینهٔ `Open Profile` نیز JSON را import می‌کند و تمام کنترل‌های فرم را از نو با همان مقادیر پر می‌کند؛ کنترل‌های پروفایل قبلی باقی نمی‌مانند.
+1. In Configure, use the near-resonant AoA template or Import JSON. A valid example is loaded at startup so the interface is usable without a personal profile. Template values are simulation assumptions, not hardware calibration.
+2. Select a scientific section, such as Probe Laser or Array & Acquisition. Edit values directly. Live JSON shows the same current draft. Importing another file replaces the relevant controls instead of retaining old input.
+3. Read the eligibility line below the command bar. Run Diagnostics resolves declared atomic inputs; Start Calculation executes the current AoA or IF-only measurement. Ctrl+Enter starts a runnable calculation. A parsed profile has not necessarily passed ARC or solver execution.
+4. In Run monitor, choose the output parent folder before starting. Each run receives a new independent subfolder and a byte-exact input snapshot. During execution the configuration is locked, while the monitor and other pages remain accessible.
+5. Results opens on Figures when a scientific image is available; Summary and Technical report are adjacent tabs. Open Saved Run verifies the saved artifacts before displaying them. Open Result Folder exposes the complete data for further research.
 
-در `Inputs`، گروه‌های میدان، نردبان یا preparation، هندسه، زمان اجرا و گزینه‌های محیط را مستقیم ویرایش کنید. اعداد با نقطهٔ اعشاری یا scientific notation وارد می‌شوند؛ قطبش، گزینه‌های منطقی و روش DoA کنترل انتخاب دارند. آرایه‌های عددی، از جمله موقعیت حسگرها، در جدول قابل ویرایش‌اند. تعداد سطر/ستون ثابت می‌ماند؛ افزودن/حذف عضو، تغییر mode/schema و افزودن بلوک اختیاری در این مرحله فرم اختصاصی ندارند. برای تغییر ساختار، الگوی دیگر یا JSON متناسب را انتخاب کنید. null و آرایه‌های مرکب نامنظم خواندنی و بدون حذف حفظ می‌شوند.
+Use the Cs133 IF-only template for a single-path IF example. The summary explicitly says DoA was not requested. For a prescribed diagnostics-only template, calculation is disabled because no sensing execution is declared; diagnostics remains available.
 
-`JSON Preview` نمایش دادهٔ همین فرم است و مستقیماً ویرایش نمی‌شود. تغییر فرم، ورودی اجرا و ذخیره را به‌روز می‌کند؛ قبل از هر ویرایش، فایل importشده با بایت‌های اصلی حفظ می‌شود. پس از ویرایش، JSON دوباره serialize می‌شود و قالب اولیه تضمین نمی‌شود، اما بخش‌های ویرایش‌نشده حفظ می‌شوند. `Save Copy` پروفایل معتبر فعلی را در فایل تازه ذخیره می‌کند و فایل موجود را بازنویسی نمی‌کند.
+## Configuration and optional effects
 
-اعتبار علمی ورودی با parser فعلی بررسی می‌شود. تا اصلاح draft نامعتبر، اجرا و ذخیره غیرفعال‌اند؛ دادهٔ معتبر قبلی بی‌صدا اجرا نمی‌شود. تغییر ورودی، diagnostics و نتیجهٔ قبلی را از نمایش پاک می‌کند. تعویض یا بستن پروفایل ویرایش‌شده نیاز به انتخاب صریح discard دارد. این اعتبارسنجی جای اجرای واقعی ARC یا solver را نمی‌گیرد.
+The section selector organizes fields by scientific task. Values accept decimal/scientific notation without display rounding entering the run data. Labels distinguish F/mF from j/mJ and show declared units. Numeric syntax errors appear beside their control; scientific incompatibilities are reported by the core parser in the visible message and eligibility area.
 
-اگر JSON بلوک atom نداشته باشد، بخش Atom مقدار مؤثر پیش‌فرض هسته را نمایش می‌دهد؛ بلوک به فایل افزوده نمی‌شود مگر آن مقدار را تغییر دهید. تغییر گونه، نردبان یا preparation را خودکار بازتنظیم نمی‌کند؛ سازگاری ترازها و کانال باید برای گونهٔ انتخاب‌شده بررسی شود.
+Add / replace effect lists sections and explicit starting values from the current examples. You select both the section and its source example. Replacing an existing section requires confirmation. These presets do not establish scientific compatibility with the remaining configuration. Remove effect deletes the chosen optional section, or sets a required version-2 spectrum declaration to null. Invalid combinations remain drafts until corrected.
 
-۲. در `Run`، مقصد والد خروجی را تعیین و `Resolve Diagnostics` را اجرا کنید. برنامه در پوشه‌ای تازه snapshot ورودی و گزارش می‌سازد. برای این نمونه `Run Sensing` غیرفعال است، چون execution ندارد.
+Numeric matrices support Duplicate row and Remove row. Vectors support Duplicate value and Remove value without silently losing entries. Advanced structure provides native tree editing of every JSON value, array entry and object member, including optional/null/composite structures that do not yet have a dedicated form. No source JSON typing is required. The parser continues to decide valid types, names and combinations.
 
-۳. `examples/lab006/experimental_near_resonant.json` را باز و `Run Sensing` را اجرا کنید. انتظار نمونهٔ ایده‌آل سه مسیر، ۶۰۱ نمونه، IF برابر 0.1 MHz و زاویهٔ ‎-30° است؛ این معیار اعتبار تجربی نیست.
+If atom is absent, the form shows the effective legacy species/fraction without silently adding an atom block. Intentionally changing it makes the declaration explicit. Changing species never retunes fields or rewrites the prepared channel.
 
-۴. در `Results`، گزارش و `Figures` را ببینید. نمودارها PNGهای توابع موجود پروژه‌اند؛ نمودار embedded تعاملی و zoom علمی هنوز ارائه نشده است. نمودار ناموجود ساخته نمی‌شود.
+Save As creates a new file and refuses an existing destination. An untouched import retains its original bytes. After editing, serialization may change whitespace but preserves unedited data. Reload, replacement and closing protect unsaved edits with a discard/cancel prompt. The live JSON is an inspector, not a separate competing editor.
 
-۵. `Open Saved Run` فقط پوشهٔ اجرای کامل همین GUI با manifest پشتیبانی‌شده را می‌پذیرد. خروجی CLI به‌تنهایی چنین manifestی ندارد. `Open Result Folder` پوشه را در فایل‌منیجر باز می‌کند.
+## Research documents are not run profiles
 
-ورودی در لحظهٔ شروع کپی می‌شود؛ ویرایش مبدأ پس از آن اجرای فعال را تغییر نمی‌دهد. برای اجرای بعدی `Reload` یا `Open Profile` را بزنید. با تعویض پروفایل، نتیجهٔ قبلی پاک می‌شود تا با ورودی جدید اشتباه نشود.
+A design.json, manifest or source guard may describe a research workflow instead of declaring fields/mode. Such documents remain visible in preview but are not converted to a different model. Choose referenced profile is enabled when a declared referenced input exists. Missing historical tools, outputs or inputs are reported rather than replaced.
 
-## اجرا و نگهداری خروجی
+## Execution semantics
 
-`raqs_gui/window.py::MainWindow` با QProcess و آرگومان‌های مستقل، worker را در همان محیط Python اجرا می‌کند. `raqs_gui/worker.py::run` از execute_profile و writer آرایه‌ها و figureهای موجود استفاده می‌کند. هیچ Qt import وارد هسته نشده است.
+Each worker is a fresh Python process using execute_profile and the existing array/figure writers. Qt never sets global atomic parameters directly. The worker is allowed to create the production spawn workers. The input is fixed before computation and a separate folder is used for every job.
 
-هم‌زمان یک job فعال است. پنجره هنگام اجرا بسته نمی‌شود؛ باید تا پایان محاسبه منتظر ماند. مرحله و log نمایش داده می‌شوند، اما درصد یا زمان تخمینی ساختگی وجود ندارد. توقف اجباری و لغو study پیاده نشده‌اند. پایان خارجی برنامه/سیستم می‌تواند خروجی ناقص یا worker باقی‌مانده ایجاد کند؛ پاک‌سازی خودکار پس از crash هنوز تضمین نشده است.
+The monitor shows starting/running/saving and actual elapsed wall time. It does not estimate remaining time or manufacture a completion percentage. Follow latest output is enabled by default; uncheck it to inspect an earlier position without being pulled back to the bottom. The compact command bar stays visible, while eligibility and messages are at the bottom.
 
-هر اجرا پوشهٔ یکتا و این فایل‌ها را دارد:
+On Windows, Stop Calculation (Ctrl+Shift+X) force-stops the current owned worker process group, including its calculation descendants. A startup handshake establishes ownership before any physics initialization. If the GUI cannot establish ownership, computation does not start. This is process termination, not a graceful solver cancellation or a partial scientific result. Stopping remains an active state until the owned group is empty and its launcher has exited; the window cannot close during cleanup. Interrupted files are retained with interrupted.json and are rejected by the result reader, even if a completion manifest was written in a finish/stop race. A metadata-write failure is reported explicitly; do not interpret that folder as a completed result. Verified Stop is Windows-only; on other platforms it is disabled. Artifact verification is not a calculation and is not cancelled by Stop.
 
-- profile.json: snapshot دقیق ورودی؛ مبدأ بازنویسی نمی‌شود.
-- run.log و status.json: log کامل و مرحلهٔ اجرا؛ پنجره فقط انتهای log را نمایش می‌دهد.
-- run_report.json: گزارش اصلی؛ sensing همچنین simulation_arrays.npz و PNGهای مرتبط دارد.
-- manifest.json: receipt تکمیل، hash ورودی/نتایج، نسخهٔ Python و بسته‌های اصلی، زمان پایان UTC و commit/dirty state در صورت دسترسی به Git.
+Worker, solver, rendering and storage errors are failures. A complete manifest is published only after the required artifacts are written. A report-write failure does not become a successful partial measurement. The log is preserved on disk; the monitor displays its recent tail.
 
-manifest پس از ذخیرهٔ موفق گزارش، آرایه و شکل‌های لازم منتشر می‌شود. شکست رسم یا ذخیره موفقیت اعلام نمی‌شود. تابع read_result در [jobs.py](../raqs_gui/jobs.py) نبود/تغییر فایل ضروری، نسخهٔ نامعتبر یا مسیر artifact نامعتبر را رد می‌کند. hash سازگاری فایل‌ها را می‌سنجد و امضای اصالت نیست. log زنده hash نمی‌شود. فهرست کامل وابستگی‌های گذرا و cache داده‌های ARC بایگانی نمی‌شود؛ [الزامات پژوهشی](README.md) همچنان برقرارند.
+Study and magnetic-core profiles can be imported, edited and saved, but their GUI execution is deliberately disabled with a visible reason. Ordinary AoA and IF-only execution are supported. A control being editable does not mean every combination is scientifically executable.
 
-viewer آرایهٔ NPZ را pickle یا بازسازی نمی‌کند؛ PNG ذخیره‌شده را نشان می‌دهد. نمایش تعاملی و بررسی معنایی همهٔ آرایه‌ها مرحلهٔ بعدی است.
+## Reading and exporting results
 
-بررسی hash هنگام بازکردن نتیجه فعلاً در thread رابط انجام می‌شود و برای فایل‌های بزرگ می‌تواند مکث ایجاد کند؛ پیش از پشتیبانی از campaign بزرگ باید به worker منتقل شود.
+The Summary table records the receiver mode, species, IF, acquisition shape, estimator where applicable, active effects, rate basis and declared scientific scope. AoA estimates are shown only for AoA measurements. No angular spectrum is synthesized for a search-free estimator.
 
-## دامنه و آزمون
+Figures displays the PNGs made by the existing scientific plotting functions. Fit Page is the default and keeps the whole figure visible; Fit Width and fixed image zoom are also available. Focus Figure hides navigation, metadata and footer to reclaim space; Escape restores the full workbench. Save Figure copies the original PNG without changing the calculation or overwriting an existing file. These controls are not a solver or interactive numerical reanalysis.
 
-پروفایل ordinary تک‌اجرا با خروجی AoA هدف این نمونه است. study، magnetic core و IF-only صریحاً رد می‌شوند. پشتیبانی از همهٔ فایل‌های مخزن تضمین نشده است. parse موفق، موفقیت ARC و solver نیست؛ خطای فیزیکی به مقدار یا کانال جایگزین تبدیل نمی‌شود.
+The run folder includes profile.json, run_report.json, simulation_arrays.npz for sensing, scientific PNGs, status.json, run.log and manifest.json. The manifest records input/artifact SHA-256 values, Python and major package versions, UTC start/finish times, inherited BLAS/OMP thread settings and available Git information. It does not sign authenticity, archive the entire ARC database or lock every transitive dependency.
 
-برای آزمون ابتدا requirements-dev.txt و requirements-gui.txt را نصب کنید:
+Saved results are verified in a background task. Missing, modified or unsupported receipts are rejected and an older successful result is not substituted. CLI output without the GUI receipt is not automatically presented as a verified GUI run. The synchronous read_result helper is still available for non-UI callers.
+
+## Tests
+
+Install requirements-dev.txt and requirements-gui.txt first:
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest tests/test_gui_jobs.py -q -ra -s
 & ./.venv/Scripts/python.exe -m pytest gui_tests -q -ra -s
 ```
 
-آزمون قرارداد فایل بدون Qt در tests/ است. آزمون‌های Qt در gui_tests/ جدا هستند؛ نبود Qt خطای نصب است و به skip تبدیل نمی‌شود. آزمون زنده دو job متوالی، تغییر مبدأ پس از شروع، مسیر فارسی/دارای فاصله، ساخت figure و تطبیق دقیق گزارش/آرایه با CLI را بررسی می‌کند. اجرای آن به ARC قابل نوشتن نیاز دارد. offscreen جای بررسی native پنجره، DPI یا نصب روی محیط تازه را نمی‌گیرد.
+GUI tests require Qt explicitly; a missing optional GUI installation is not silently counted as a pass. Live tests require writable ARC data and exercise real subprocesses. They cover independent runs, exact AoA/IF-only equivalence to CLI examples, import/edit/save behavior, invalid drafts, effect preservation and report-write failure. Thread-limited test commands and actual results for this delivery are recorded in the [verification report](gui-verification.md).
 
-بسته‌بندی اجرایی، نمودار تعاملی، ویرایش ساختاری همهٔ مدل‌ها، study، چندکاربره و پشتیبانی آزموده‌شده از سیستم‌عامل دیگر هنوز ارائه نشده‌اند.
+## Limits
 
-## شواهد بررسی نمونه
+This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, standalone packaging, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Other operating systems have not been certified.
 
-در Windows با Python 3.11.0، نصب requirements-gui.txt و pip check بررسی شدند. آزمون زندهٔ Qt دو اجرای مستقل و sensing برابر با CLI را گذراند. رندرهای Qt در اندازه‌های 1120×780 و 800×580 بررسی شدند؛ فونت fallback از Matplotlib مشکل کشف فونت سیستم را رفع کرد. درخت کنترل‌های native ویندوز قابل مشاهده بود، اما ابزار تعامل اشاره‌گر خطای geometry داد؛ گردش کار کامل با کلیک native تأیید نشده است. شمار آزمون‌ها و نتیجهٔ commit در گزارش تحویل ذکر می‌شود؛ اجرای offscreen یا کشف کنترل‌ها معادل تأیید کامل accessibility یا DPI نیست.
+Advanced Structure uses clearly bordered in-cell editors with explicit row height; click a scalar value or use F2. Editing preserves numeric text/scientific notation until the core parser validates the resulting profile. The large application heading has been removed; the operating-system window title identifies the application. The JSON preview can be hidden via the preview checkbox.
+
+Process ownership uses Windows Job Objects with no breakaway permission and kill-on-last-handle-close. See the [Microsoft Job Objects documentation](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects). Other application processes are not members of this calculation job.

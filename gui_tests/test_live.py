@@ -10,6 +10,8 @@ import numpy as np
 
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtWidgets import QApplication
+from PySide6.QtTest import QTest
+from PySide6.QtCore import Qt
 from raqs_gui.jobs import read_result
 from raqs_gui.window import MainWindow
 
@@ -18,10 +20,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def wait_for_worker(app, window):
     deadline = time.monotonic() + 180
-    while window.active and time.monotonic() < deadline:
+    while (window.active or window.reading) and time.monotonic() < deadline:
         app.processEvents()
         time.sleep(.02)
-    assert not window.active, 'GUI worker exceeded the test deadline'
+    assert not window.active and not window.reading, 'GUI worker exceeded the test deadline'
     assert window.result_directory is not None, window.notice.text() + '\n' + window.log.toPlainText()
 
 
@@ -35,7 +37,7 @@ def test_two_fresh_qt_jobs_and_cli_equivalence(tmp_path):
     source.write_bytes((ROOT / 'examples/lab006/prescribed_reference.json').read_bytes())
     window.load_profile(source)
     original = window.raw
-    window.start_run(True)
+    QTest.mouseClick(window.diagnostic_button, Qt.MouseButton.LeftButton)
     source.write_bytes(b'changed after run start')
     wait_for_worker(app, window)
     diagnostic_directory = window.result_directory
@@ -43,8 +45,9 @@ def test_two_fresh_qt_jobs_and_cli_equivalence(tmp_path):
     assert report['diagnostics_only'] and not images
     assert (diagnostic_directory / 'profile.json').read_bytes() == original
     window.load_profile(ROOT / 'examples/lab006/experimental_near_resonant.json')
-    window.editor.controls[('fields', 'signal', 'electric_field_vm')].setText('0.006')
-    window.start_run(False)
+    control = window.editor.controls[('fields', 'signal', 'electric_field_vm')]
+    control.setFocus(); control.selectAll(); QTest.keyClicks(control, '0.006')
+    QTest.mouseClick(window.sensing_button, Qt.MouseButton.LeftButton)
     assert not window.editor.isEnabled()
     wait_for_worker(app, window)
     assert window.editor.isEnabled()
