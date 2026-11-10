@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 from scipy.optimize import brentq
 from scipy.stats import binom
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
 from rydberg_aoa.config.detection_study import detection_jobs, detection_job_profile
@@ -20,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise014/{mode}_detection_pin.json').read_text())
+    return legacy_noise_profile((ROOT/f'examples/noise014/{mode}_detection_pin.json'))
 
 
 def profile(mode='prescribed'):
@@ -230,7 +232,7 @@ def test_undefined_threshold_is_retained_through_complete_study(monkeypatch,tmp_
 
 
 def test_nested_noise_counts_seeds_and_signal_noise_contract():
-    d=json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())
+    d=legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))
     d['study']=document()['study'];d['measurement']={'mode':'if_only','signal_enabled':True}
     with pytest.raises(PhysicsConfigurationError,match='signal amplitude'):parse_run_profile(d)
     for name,source in d['noise']['sources'].items():source['enabled']=name=='rf_lo_amplitude'

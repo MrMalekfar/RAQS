@@ -10,6 +10,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
 from rydberg_aoa.config.study import study_capabilities,effective_point_profile,plan_study
@@ -21,7 +23,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise008/{mode}_rin_sweep.json').read_text())
+    return legacy_noise_profile((ROOT/f'examples/noise008/{mode}_rin_sweep.json'))
 
 
 @pytest.mark.parametrize('field,bad',[('schema_version',True),('kind',['noise_strength_sweep']),('name',''),
@@ -44,7 +46,7 @@ def test_all_effective_points_validated_before_any_physics(monkeypatch):
 
 def test_paired_poisson_is_not_claimed_from_equal_seed():
     data=document()
-    data['noise']['readout']=json.loads((ROOT/'examples/noise007/prescribed_rin_pin.json').read_text())['noise']['readout']
+    data['noise']['readout']=legacy_noise_profile((ROOT/'examples/noise007/prescribed_rin_pin.json'))['noise']['readout']
     with pytest.raises(PhysicsConfigurationError,match='Poisson'):parse_run_profile(data)
     data['study']['random_policy']='independent'
     assert parse_run_profile(data).study.random_policy=='independent'
@@ -83,7 +85,7 @@ def test_gui_plan_cost_and_johnson_resistance_axis():
     assert [r['atomic_evolutions_per_path'] for r in preview['points']]==[1,4,4]
     assert preview['total_atomic_evolutions']==30
     data=document()
-    data['noise']=json.loads((ROOT/'examples/noise004/prescribed_pin.json').read_text())['noise']
+    data['noise']=legacy_noise_profile((ROOT/'examples/noise004/prescribed_pin.json'))['noise']
     data['study'].update(source='johnson_current',parameter='shunt_resistance_ohm',values=[1e6,1e8],random_policy='independent')
     parsed=parse_run_profile(data)
     assert effective_point_profile(parsed,0).noise.detector==parsed.noise.detector

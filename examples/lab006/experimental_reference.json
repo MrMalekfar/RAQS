@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "mode": "experimental",
   "fields": {
     "probe": {
@@ -101,5 +101,7 @@
     "processes": 1,
     "doa_method": "phase_beamforming",
     "cycles_per_snapshot": 2
-  }
+  },
+  "environment": null,
+  "spectrum": null
 }

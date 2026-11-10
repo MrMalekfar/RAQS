@@ -12,6 +12,8 @@ import numpy as np
 import pytest
 import qutip as qt
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.noise import parse_noise_config
 from rydberg_aoa.exceptions import PhysicsConfigurationError, PhysicsCalculationError
 from rydberg_aoa.physics.hamiltonian import create_sensor_model
@@ -24,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def declaration():
-    return json.loads((ROOT/'examples/noise006/prescribed_laser_frequency.json').read_text())['noise']
+    return legacy_noise_profile((ROOT/'examples/noise006/prescribed_laser_frequency.json'))['noise']
 
 
 @pytest.mark.parametrize('field,bad', [('enabled', 1), ('stationary_std', True),
@@ -90,7 +92,7 @@ def test_stable_streams_toggles_prefix_and_pickle():
     extended = build_rf_realization(replace(cfg, trials=5, drive=replace(cfg.drive, horizon_us=240.)), trial=0)
     assert extended.probe_frequency_hz[:len(r.times_us)] == r.probe_frequency_hz
     # Appending laser sources cannot move the previously committed RF streams.
-    rf = json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())['noise']
+    rf = legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))['noise']
     original = build_rf_realization(parse_noise_config(rf), trial=0)
     rf['sources'].update(declaration()['sources'])
     mixed = build_rf_realization(parse_noise_config(rf), trial=0)
@@ -219,7 +221,7 @@ def test_real_output_grid_refinement_with_same_laser_path(monkeypatch):
 
 def test_common_laser_dispatch_and_single_readout_trial(isolation, monkeypatch):
     data = declaration()
-    data['readout'] = json.loads((ROOT/'examples/noise003/prescribed_campaign.json').read_text())['noise']
+    data['readout'] = legacy_noise_profile((ROOT/'examples/noise003/prescribed_campaign.json'))['noise']
     data['readout']['trials'] = data['trials']
     data['readout']['seed'] = data['seed']
     tasks = []
@@ -255,8 +257,6 @@ def test_real_cli_saved_laser_realization_and_fields(tmp_path, mode):
     filename = 'prescribed_laser_pin.json' if mode == 'prescribed_pin' else f'{mode}_laser_frequency.json'
     data = json.loads((ROOT/'examples/noise006'/filename).read_text())
     data['noise']['trials'] = 1
-    if mode == 'prescribed_pin':
-        data['noise']['readout']['trials'] = 1
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'; path.write_text(json.dumps(data))
     args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path)]

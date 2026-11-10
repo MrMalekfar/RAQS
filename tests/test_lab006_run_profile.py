@@ -34,8 +34,8 @@ def test_profiles_are_explicit_and_detached():
     assert len(profile.run_config.positions_m) == 3
 
 
-@pytest.mark.parametrize('bad', [True, '1', None, 2, 1.0])
-def test_schema_version_is_exact_integer_one(bad):
+@pytest.mark.parametrize('bad', [True, '1', None, 3, 1.0])
+def test_schema_version_is_exact_supported_integer(bad):
     data = document()
     data['schema_version'] = bad
     with pytest.raises(PhysicsConfigurationError):

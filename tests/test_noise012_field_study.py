@@ -8,6 +8,8 @@ import sys
 import numpy as np
 import pytest
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.field_study import SignalFieldStudy, field_point_profile
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
@@ -20,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise012/{mode}_field_response.json').read_text())
+    return legacy_noise_profile((ROOT/f'examples/noise012/{mode}_field_response.json'))
 
 
 def definition(values=(1.,2.,5.,9.), region=None, linear_budget=1e-8, derivative_budget=1e-8):

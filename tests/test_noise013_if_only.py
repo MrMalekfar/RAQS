@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.measurement import MeasurementOptions
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
@@ -23,7 +25,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise013/{mode}_null_pin.json').read_text())
+    return legacy_noise_profile((ROOT/f'examples/noise013/{mode}_null_pin.json'))
 
 
 @pytest.mark.parametrize('options',[{'mode':'if_only','signal_enabled':0},
@@ -136,7 +138,7 @@ def test_runner_signal_off_uses_zero_drive_no_doa_or_snapshot(isolation,monkeypa
 
 
 def test_null_colored_lo_campaign_is_supported_but_signal_noise_rejected(isolation,monkeypatch):
-    d=json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())['noise']
+    d=legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))['noise']
     d['trials']=2
     for name,s in d['sources'].items():s['enabled']=name=='rf_lo_amplitude'
     cfg=plan(measurement_mode='if_only',positions_m=((0.,0.,0.),));tasks=[]
@@ -201,7 +203,7 @@ def test_actual_null_pin_profile_report_export_and_figures(tmp_path,mode):
 def test_actual_explicit_aoa_switch_on_is_bit_identical_to_existing_path():
     from concurrent.futures import ProcessPoolExecutor
     import multiprocessing
-    d=json.loads((ROOT/'examples/noise004/prescribed_pin.json').read_text());d['spectrum']=None
+    d=legacy_noise_profile((ROOT/'examples/noise004/prescribed_pin.json'));d['spectrum']=None
     d['noise']['trials']=1
     for s in d['noise']['sources'].values():s['enabled']=False
     old=parse_run_profile(d);new=replace(old,measurement=MeasurementOptions('aoa',True))

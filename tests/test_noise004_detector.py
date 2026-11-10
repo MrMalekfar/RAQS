@@ -12,6 +12,8 @@ import numpy as np
 import pytest
 from scipy.constants import elementary_charge as Q_E, Boltzmann as K_B
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.noise import parse_noise_config
 from rydberg_aoa.config.detector import validate_detector_sampling
 from rydberg_aoa.exceptions import PhysicsCalculationError, PhysicsConfigurationError
@@ -24,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def declaration():
-    return json.loads((ROOT/'examples/noise004/prescribed_pin.json').read_text())['noise']
+    return legacy_noise_profile((ROOT/'examples/noise004/prescribed_pin.json'))['noise']
 
 
 def config(active=(), **detector):

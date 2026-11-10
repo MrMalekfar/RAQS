@@ -6,6 +6,8 @@ import json
 from types import SimpleNamespace
 import numpy as np
 import pytest
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
 from rydberg_aoa.config.study import plan_study,study_capabilities
@@ -19,7 +21,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise010/{mode}_grid_convergence.json').read_text(encoding='utf-8'))
+    return legacy_noise_profile((ROOT/f'examples/noise010/{mode}_grid_convergence.json'))
 
 
 @pytest.mark.parametrize('field,bad',[('seed',True),('trials',0),('schema_version',True),('name',''),
@@ -36,7 +38,7 @@ def test_bad_study_pre_dispatch(field,bad,monkeypatch):
 def test_all_grids_and_readout_prevalidated():
     d=document();d['study']['output_samples']=[10,601]
     with pytest.raises(PhysicsConfigurationError):parse_run_profile(d)
-    d=document();d['noise']['readout']=json.loads((ROOT/'examples/noise003/prescribed_campaign.json').read_text())['noise']
+    d=document();d['noise']['readout']=legacy_noise_profile((ROOT/'examples/noise003/prescribed_campaign.json'))['noise']
     d['noise']['readout'].update(seed=d['noise']['seed'],trials=d['noise']['trials'])
     with pytest.raises(PhysicsConfigurationError,match='readout'):parse_run_profile(d)
 
@@ -94,7 +96,7 @@ def test_wrong_injected_grid_and_disabled_channel_fail():
 def test_all_seven_noise_channels_coupled_at_common_nodes():
     d=document()
     for filename in ['examples/noise005/prescribed_rf.json','examples/noise006/prescribed_laser_frequency.json']:
-        d['noise']['sources'].update(json.loads((ROOT/filename).read_text())['noise']['sources'])
+        d['noise']['sources'].update(legacy_noise_profile((ROOT/filename))['noise']['sources'])
     d['noise']['sources']['laser_coupling_intensity']['enabled']=True
     p=parse_run_profile(d);cfg=convergence_profile(p,601,.1).noise
     fine=build_rf_realization(cfg,trial=0);coarse=engine.nested_realization(fine,2)
