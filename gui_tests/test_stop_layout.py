@@ -26,7 +26,7 @@ def pump(app, predicate, timeout=15):
 def test_structure_value_editor_is_visible_and_commits_a_scientific_number():
     app = QApplication.instance() or QApplication([])
     w = MainWindow()
-    d = StructureDialog({'power': .0001}, {}, w); d.show(); app.processEvents()
+    d = StructureDialog({'power': .0001}, dict, w); d.show(); app.processEvents()
     item = d.tree.topLevelItem(0).child(0)
     rect = d.tree.visualRect(d.tree.indexFromItem(item, 1))
     QTest.mouseClick(d.tree.viewport(), Qt.MouseButton.LeftButton, pos=rect.center())
@@ -71,7 +71,7 @@ def test_figure_first_fits_the_page_and_focus_reclaims_space(tmp_path):
     path = tmp_path / 'consumer.png'; assert image.save(str(path))
     report = {'diagnostics_only': False, 'signed_if_mhz': .1,
               'sensing': {'true_aoa_deg': -30, 'estimated_aoa_deg': -30}}
-    w.display_result(tmp_path, report, [path]); app.processEvents(); app.processEvents()
+    w.display_result(tmp_path, report, w.raw, {path.name: path.read_bytes()}); app.processEvents(); app.processEvents()
     assert w.result_tabs.currentWidget() == w.figures_page
     assert w.figure_zoom.currentText() == 'Fit page'
     assert w.image.pixmap().height() <= w.figure_scroll.viewport().height()

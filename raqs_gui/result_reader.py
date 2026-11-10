@@ -4,7 +4,7 @@ from .jobs import read_result
 
 
 class ReadSignals(QObject):
-    complete = Signal(int, object, object)
+    complete = Signal(int, object)
     failed = Signal(int, str)
 
 
@@ -17,7 +17,7 @@ class ReadResult(QRunnable):
 
     def run(self):
         try:
-            report, images = read_result(self.directory)
-            self.signals.complete.emit(self.generation, report, images)
+            result = read_result(self.directory, capture=True)
+            self.signals.complete.emit(self.generation, result)
         except Exception as exc:
             self.signals.failed.emit(self.generation, str(exc))

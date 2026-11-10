@@ -3,11 +3,17 @@ import copy
 import json
 
 from PySide6.QtCore import Qt
+
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QHBoxLayout, QInputDialog, QLabel,
     QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QStyledItemDelegate,
     QLineEdit, QAbstractItemView,
 )
+
+
+from rydberg_aoa.exceptions import PhysicsConfigurationError
+
+from .jobs import load_snapshot
 
 
 def reject_constant(token):
@@ -38,12 +44,12 @@ class ParameterDelegate(QStyledItemDelegate):
 
 
 class StructureDialog(QDialog):
-    def __init__(self, document, presets, parent=None):
+    def __init__(self, document, load_presets, parent=None):
         super().__init__(parent)
         self.setWindowTitle('All Parameters and Options')
         self.resize(850, 650)
         self.result_document = None
-        self.presets = presets
+        self.load_presets = load_presets
         layout = QVBoxLayout(self)
         hint = QLabel('Click a scalar value or press F2 to edit it. The blue-bordered input is the active editor. Core validation runs when you apply changes.')
         hint.setWordWrap(True)
@@ -114,10 +120,17 @@ class StructureDialog(QDialog):
             item.parent().removeChild(item)
 
     def add_preset(self):
-        label, ok = QInputDialog.getItem(self, 'Optional Section Preset', 'Source example / option (replaces that section):', list(self.presets), 0, False)
+        presets = self.load_presets()
+        if not presets:
+            QMessageBox.information(self, 'Option presets', 'No readable option presets were found.')
+            return
+        name, ok = QInputDialog.getItem(self, 'Option preset', 'Section to replace:', sorted(presets), 0, False)
         if not ok:
             return
-        name, value = self.presets[label]
+        source, ok = QInputDialog.getItem(self, 'Option preset', 'Source example:', sorted(presets[name]), 0, False)
+        if not ok:
+            return
+        value = presets[name][source]
         root = self.tree.topLevelItem(0)
         for i in reversed(range(root.childCount())):
             if root.child(i).text(0) == name:
@@ -127,9 +140,10 @@ class StructureDialog(QDialog):
 
     def apply(self):
         try:
-            self.result_document = self.read(self.tree.topLevelItem(0))
-            json.dumps(self.result_document, allow_nan=False)
-        except (ValueError, TypeError) as exc:
+            document = self.read(self.tree.topLevelItem(0))
+            load_snapshot(json.dumps(document, allow_nan=False).encode('utf-8'))
+        except (ValueError, TypeError, PhysicsConfigurationError) as exc:
             QMessageBox.warning(self, 'Invalid Value', str(exc))
             return
+        self.result_document = document
         self.accept()

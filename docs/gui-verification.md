@@ -66,3 +66,12 @@ Filled Qt captures were inspected together at 1380×880 and 1000×680, using a v
 This review used QTest events and Qt window grabs. Native pointer/screenshot tooling and real Windows DPI changes remain unverified; successful Qt rendering does not certify them. Physics/core, CLI, dependencies, baseline, seed and tolerance were unchanged.
 
 The additional sandboxed monitor-capture attempt encountered ARC SQLite `attempt to write a readonly database` and is not a successful calculation. Repeating the capture outside that filesystem restriction produced real ARC log output and verified owned-process stopping. No atomic fallback or fabricated result was used. Final `pip check`, syntax compilation, local documentation link checks and `git diff --check` succeeded.
+
+
+## Review fixes
+
+The branch `codex/workbench-review-fixes` starts at `cfa280d`, the merge of PR #4. The review fixes preserve an unsaved draft when Import or Reload fails, validate Advanced Structure before replacing the form, keep verified results available after edits, and bind the displayed and exported PNG to the verified bytes. A diagnostics report for a different snapshot opens in Results.
+
+On Windows with the documented test-only BLAS thread caps, `python -m pytest gui_tests tests/test_gui_jobs.py -q -ra` finished with **41 passed, 0 failed, 0 skipped** in 130.93 seconds. The run includes live ARC AoA and Cs133 IF-only paths and comparison with the CLI. The earlier full attempt had 38 passes and three failures. A delayed log scrollbar range caused one failure. The other two involved an obsolete default-preview assertion and a test that changed the active flag without refreshing its controls. The final run included the fixes. The restricted-shell attempt stopped during ARC setup before test collection.
+
+The Windows Qt backend was used at the host's existing 125% scale. At 1090×610 logical pixels, a keyboard section change, the optional JSON pane, a prior result with a different input snapshot, and visible export feedback in Focus Figure were checked. Local captures are under `outputs/workbench-review-fixes/`. The filled figure was reopened from a prior real run whose manifest passed verification. QTest supplied keyboard events and the export path. OS scaling changes and NVDA were outside this check. The whole repository suite was not run.

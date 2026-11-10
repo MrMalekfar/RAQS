@@ -6,13 +6,15 @@ from raqs_gui.window import MainWindow, ROOT
 from raqs_gui.structure import StructureDialog
 
 
-def test_start_and_preview_are_visible_without_finding_a_tab():
+def test_start_and_preview_toggle_are_visible_without_finding_a_tab():
     app = QApplication.instance() or QApplication([])
     window = MainWindow()
     window.show()
     app.processEvents()
     assert window.sensing_button.text() == 'Start Calculation'
     assert window.sensing_button.isVisible() and window.sensing_button.isEnabled()
+    assert window.preview_toggle.isVisible() and not window.profile_text.isVisible()
+    window.preview_toggle.click()
     assert window.profile_text.isVisible()
     assert json.loads(window.profile_text.toPlainText()) == json.loads(window.raw)
     window.close()

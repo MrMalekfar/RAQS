@@ -6,7 +6,7 @@ import math
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox, QFormLayout, QGroupBox, QLabel, QLineEdit, QScrollArea,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QStackedWidget, QPushButton, QHBoxLayout,
+    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget, QStackedWidget, QPushButton, QHBoxLayout, QListWidget,
 )
 
 
@@ -60,10 +60,17 @@ class ProfileEditor(QWidget):
         self.controls = {}
         self.default_atom = None
         self.errors = {}
-        layout = QVBoxLayout(self); layout.setContentsMargins(0, 0, 0, 0)
-        self.sections = QComboBox(); self.sections.setAccessibleName('Scientific configuration section')
-        self.pages = QStackedWidget(); self.sections.currentIndexChanged.connect(self.pages.setCurrentIndex)
-        layout.addWidget(self.sections); layout.addWidget(self.pages, 1)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.sections = QListWidget()
+        self.sections.setObjectName('configurationSections')
+        self.sections.setAccessibleName('Scientific configuration sections')
+        self.sections.setFixedWidth(180)
+        self.sections.setWordWrap(True)
+        self.pages = QStackedWidget()
+        self.sections.currentRowChanged.connect(self.pages.setCurrentIndex)
+        layout.addWidget(self.sections)
+        layout.addWidget(self.pages, 1)
 
     def clear_profile(self):
         self.sections.clear()
@@ -95,7 +102,8 @@ class ProfileEditor(QWidget):
             page = QWidget()
             form = QFormLayout(page)
             form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
-            form.setContentsMargins(16, 16, 16, 16)
+            form.setContentsMargins(12, 12, 12, 12)
+            form.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
             if name == 'General':
                 for key, scalar in value.items():
                     form.addRow(field_label(key), self.control_row((key,), scalar))
@@ -104,10 +112,10 @@ class ProfileEditor(QWidget):
             scroll = QScrollArea()
             scroll.setWidgetResizable(True)
             scroll.setWidget(page)
-            self.sections.addItem(SECTION_NAMES.get(name, name.replace('_', ' ').title()))
             self.pages.addWidget(scroll)
+            self.sections.addItem(SECTION_NAMES.get(name, name.replace('_', ' ').title()))
         if self.pages.count() > 1:
-            self.sections.setCurrentIndex(1)
+            self.sections.setCurrentRow(1)
 
     def add_fields(self, form, path, value):
         if isinstance(value, dict):

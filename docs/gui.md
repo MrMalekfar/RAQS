@@ -4,6 +4,8 @@ The workbench is a local English-language PySide6 desktop interface over the exi
 
 ## Install and launch
 
+On Windows, double-click **Launch RAQS GUI.cmd** in the project folder after the initial setup. The launcher uses the project's `.venv` and keeps its console open if startup fails so you can read the error.
+
 From the repository root, using the project Python environment:
 
 ```powershell
@@ -17,8 +19,8 @@ The optional GUI requirements use PySide6-Essentials 6.10.3. CLI-only installati
 ## First complete workflow
 
 1. In Configure, use the near-resonant AoA template or Import JSON. A valid example is loaded at startup so the interface is usable without a personal profile. Template values are simulation assumptions, not hardware calibration.
-2. Select a scientific section, such as Probe Laser or Array & Acquisition. Edit values directly. Live JSON shows the same current draft. Importing another file replaces the relevant controls instead of retaining old input.
-3. Read the eligibility line below the command bar. Run Diagnostics resolves declared atomic inputs; Start Calculation executes the current AoA or IF-only measurement. Ctrl+Enter starts a runnable calculation. A parsed profile has not necessarily passed ARC or solver execution.
+2. Select a scientific section, such as Probe Laser or Array & Acquisition. Edit values directly. Turn on JSON preview to inspect the same draft. Importing another file replaces the relevant controls instead of retaining old input.
+3. Read the eligibility line at the bottom of the window. Run Diagnostics resolves declared atomic inputs; Start Calculation executes the current AoA or IF-only measurement. Ctrl+Enter starts a runnable calculation. A parsed profile has not necessarily passed ARC or solver execution.
 4. In Run monitor, choose the output parent folder before starting. Each run receives a new independent subfolder and a byte-exact input snapshot. During execution the configuration is locked, while the monitor and other pages remain accessible.
 5. Results opens on Figures when a scientific image is available; Summary and Technical report are adjacent tabs. Open Saved Run verifies the saved artifacts before displaying them. Open Result Folder exposes the complete data for further research.
 
@@ -26,9 +28,9 @@ Use the Cs133 IF-only template for a single-path IF example. The summary explici
 
 ## Configuration and optional effects
 
-The section selector organizes fields by scientific task. Values accept decimal/scientific notation without display rounding entering the run data. Labels distinguish F/mF from j/mJ and show declared units. Numeric syntax errors appear beside their control; scientific incompatibilities are reported by the core parser in the visible message and eligibility area.
+The section list organizes fields by scientific task. Values accept decimal/scientific notation without display rounding entering the run data. Labels distinguish F/mF from j/mJ and show declared units. Numeric syntax errors appear beside their control; scientific incompatibilities are reported by the core parser in the visible message and eligibility area.
 
-Add / replace effect lists sections and explicit starting values from the current examples. You select both the section and its source example. Replacing an existing section requires confirmation. These presets do not establish scientific compatibility with the remaining configuration. Remove effect deletes the chosen optional section, or sets a required version-2 spectrum declaration to null. Invalid combinations remain drafts until corrected.
+Add / replace option lists sections and explicit starting values from the current examples. You select both the section and its source example. Replacing an existing section requires confirmation. These presets do not establish scientific compatibility with the remaining configuration. Remove option deletes the chosen optional section, or sets a required version-2 spectrum declaration to null. Invalid combinations remain drafts until corrected.
 
 Numeric matrices support Duplicate row and Remove row. Vectors support Duplicate value and Remove value without silently losing entries. Advanced structure provides native tree editing of every JSON value, array entry and object member, including optional/null/composite structures that do not yet have a dedicated form. No source JSON typing is required. The parser continues to decide valid types, names and combinations.
 
@@ -54,13 +56,15 @@ Study and magnetic-core profiles can be imported, edited and saved, but their GU
 
 ## Reading and exporting results
 
+Editing the current draft keeps the last viewed result and its folder shortcut. The result header identifies the run and marks when the exact input snapshot differs from the draft. Archived diagnostics for another input open in Results. Inspect Physics shows diagnostics only for a matching input.
+
 The Summary table records the receiver mode, species, IF, acquisition shape, estimator where applicable, active effects, rate basis and declared scientific scope. AoA estimates are shown only for AoA measurements. No angular spectrum is synthesized for a search-free estimator.
 
-Figures displays the PNGs made by the existing scientific plotting functions. Fit Page is the default and keeps the whole figure visible; Fit Width and fixed image zoom are also available. Focus Figure hides navigation, metadata and footer to reclaim space; Escape restores the full workbench. Save Figure copies the original PNG without changing the calculation or overwriting an existing file. These controls are not a solver or interactive numerical reanalysis.
+Figures displays the PNGs made by the existing scientific plotting functions. Fit Page is the default and keeps the whole figure visible; Fit Width and fixed image zoom are also available. Focus Figure hides navigation and the footer to reclaim space while retaining run identity and export feedback. Escape restores the full workbench. Save Figure copies the PNG bytes verified during opening and requires an unused destination filename. Changes to the original file after opening cannot replace the displayed or exported figure. These controls are not a solver or interactive numerical reanalysis.
 
 The run folder includes profile.json, run_report.json, simulation_arrays.npz for sensing, scientific PNGs, status.json, run.log and manifest.json. The manifest records input/artifact SHA-256 values, Python and major package versions, UTC start/finish times, inherited BLAS/OMP thread settings and available Git information. It does not sign authenticity, archive the entire ARC database or lock every transitive dependency.
 
-Saved results are verified in a background task. Missing, modified or unsupported receipts are rejected and an older successful result is not substituted. CLI output without the GUI receipt is not automatically presented as a verified GUI run. The synchronous read_result helper is still available for non-UI callers.
+Saved results are verified in a background task. Missing, modified or unsupported receipts are rejected. If another verified result is already on screen, it stays available with its own run ID. The footer reports the failed attempt. CLI output without the GUI receipt is not automatically presented as a verified GUI run. The synchronous read_result helper is still available for non-UI callers.
 
 ## Tests
 
@@ -77,6 +81,6 @@ GUI tests require Qt explicitly; a missing optional GUI installation is not sile
 
 This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, standalone packaging, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Other operating systems have not been certified.
 
-Advanced Structure uses clearly bordered in-cell editors with explicit row height; click a scalar value or use F2. Editing preserves numeric text/scientific notation until the core parser validates the resulting profile. The large application heading has been removed; the operating-system window title identifies the application. The JSON preview can be hidden via the preview checkbox.
+Advanced Structure uses clearly bordered in-cell editors with explicit row height; click a scalar value or use F2. Editing preserves numeric text/scientific notation until the core parser validates the resulting profile. The large application heading has been removed; the operating-system window title identifies the application. Use the section list to navigate the form and enable JSON preview when needed. A failed Import or Reload leaves the current draft intact. Advanced Structure keeps the dialog open when validation rejects the edited document. Presets are read when requested.
 
 Process ownership uses Windows Job Objects with no breakaway permission and kill-on-last-handle-close. See the [Microsoft Job Objects documentation](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects). Other application processes are not members of this calculation job.

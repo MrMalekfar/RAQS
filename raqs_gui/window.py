@@ -11,6 +11,8 @@ from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (QFileDialog, QMainWindow, QMessageBox, QPlainTextEdit,
                               QDialog, QInputDialog, QTableWidgetItem)
 
+from rydberg_aoa.exceptions import PhysicsConfigurationError
+
 from .jobs import auxiliary_document, load_snapshot, parse_snapshot, prepare_run, read_result, write_json
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,20 +34,23 @@ class MainWindow(QMainWindow):
             QFontDatabase.addApplicationFont(str(Path(get_data_path()) / 'fonts' / 'ttf' / filename))
         self.setFont(QFont('DejaVu Sans', 10))
         self.setWindowTitle('RAQS — Research Workbench')
-        self.resize(1120, 780)
-        self.setMinimumSize(800, 580)
         self.raw = None
         self.source = None
         self.profile = None
         self.run_directory = None
         self.result_directory = None
-        self.images = []
+        self.images = {}
+        self.result_profile = None
+        self.result_diagnostics = False
+        self.result_summary = None
         self.active = False
         self.job = None
         self.stop_requested = False
         self.worker_ready = False
         self.startup_error = None
         self.dirty = False
+        self.template_name = 'New profile'
+        self.profile_context = 'No profile'
         self.execution_error = None
         self.related_profiles = []
         self.current_result_matches_draft = False
@@ -61,8 +66,9 @@ class MainWindow(QMainWindow):
         from .workbench import build_workbench
         self.started_at = None
         build_workbench(self, ROOT, text_view)
-        self.resize(1380, 880)
-        self.setMinimumSize(1000, 680)
+        available = self.screen().availableGeometry()
+        self.resize(min(1380, available.width() - 36), min(880, available.height() - 64))
+        self.setMinimumSize(900, 555)
         self.update_controls()
         self.new_profile()
 
@@ -96,6 +102,7 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(self.active and sys.platform == 'win32' and not self.stop_requested)
         self.stop_button.setToolTip('Force-stop this calculation and its owned worker descendants; partial output will not be accepted.' if sys.platform == 'win32' else 'Verified process-tree stop is currently Windows-only.')
         self.related_button.setEnabled(bool(self.related_profiles) and not self.active)
+        self.related_button.setVisible(bool(self.related_profiles))
         self.open_result_button.setEnabled(not self.active and not self.reading)
 
     def message(self, text, severity='info'):
@@ -108,11 +115,9 @@ class MainWindow(QMainWindow):
         self.message(f'Error: {exc}', 'error')
 
     def open_profile(self):
-        if not self.confirm_discard():
-            return
         path, _ = QFileDialog.getOpenFileName(self, 'Open RAQS Profile', str(ROOT / 'examples'), 'JSON profiles (*.json)')
         if path:
-            self.load_profile(Path(path))
+            self.load_profile(path, confirm=True)
 
     def confirm_discard(self):
         return not self.dirty or QMessageBox.question(
@@ -121,67 +126,78 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Cancel) == QMessageBox.StandardButton.Discard
 
     def new_profile(self):
-        if self.active or not self.confirm_discard():
-            return
-        self.load_profile(ROOT / 'examples' / self.template_choice.currentData())
-        if self.raw is not None:
-            self.source = None
-            self.profile_label.setText('New profile from ' + self.template_choice.currentText())
-            self.message('Template loaded. Edit Inputs directly, then save a copy or run. Template values are simulation assumptions, not hardware calibration.')
-            self.update_controls()
+        if self.load_profile(ROOT / 'examples' / self.template_choice.currentData(), confirm=True, template=True):
+            self.message('Template loaded. Edit the inputs, then save a copy or run. Template values are simulation assumptions.')
 
     def reload_profile(self):
-        if self.confirm_discard():
-            self.load_profile(self.source)
+        self.load_profile(self.source, confirm=True)
 
-    def load_profile(self, path):
+    def refresh_profile_label(self):
+        name = self.source.name if self.source else self.template_name
+        state = 'Unsaved edits' if self.dirty else 'Saved' if self.source else 'Template'
+        if self.profile:
+            species = self.profile.atom.species if self.profile.atom else 'Rb85 (default)'
+            context = f'{self.profile.mode} · {species}'
+        else:
+            context = self.profile_context
+        self.profile_label.setText(f'{name}  ·  {context}  ·  {state}')
+        self.profile_label.setToolTip(str(self.source) if self.source else name)
+
+    def load_profile(self, path, *, confirm=False, template=False):
         if path is None or self.active:
-            return
-        self.raw = self.profile = None
-        self.notice.setProperty('severity', 'normal')
-        self.dirty = False
-        self.execution_error = None
-        self.related_profiles = []
-        self.source = Path(path)
-        self.profile_text.clear()
-        self.diagnostics_text.clear()
-        self.diagnostics_summary.setText('No physics resolution for this draft. Run Diagnostics to inspect its atomic inputs.')
-        self.clear_result()
-        self.editor.clear_profile()
+            return False
+        source = Path(path)
         try:
-            raw = self.source.read_bytes()
-            self.profile_text.setPlainText(raw.decode('utf-8-sig'))
-            auxiliary = auxiliary_document(raw, self.source, ROOT)
-            if auxiliary is not None:
-                message, self.related_profiles = auxiliary
-                self.profile_label.setText(f'Research document (not executable): {self.source}')
-                self.execution_error = 'Research document, not a runnable profile. Choose a referenced profile or import a run profile.'
-                self.message(message)
-                self.update_controls()
-                return
-            profile = load_snapshot(raw)
-            self.editor.load_document(json.loads(raw.decode('utf-8-sig')))
-            self.profile_text.setPlainText(raw.decode('utf-8-sig'))
-            self.raw, self.profile = raw, profile
-            self.profile_label.setText(f'{self.source}\nMode: {profile.mode}  |  Atom: {profile.atom.species if profile.atom else "Rb85 (default)"}  |  Sensing: {"available" if profile.run_config else "not declared"}')
-            self.message('Profile imported into Inputs. Edit values directly; the JSON preview and execution follow the current validated form.')
-            try:
-                parse_snapshot(raw)
-            except ValueError as exc:
-                self.execution_error = str(exc)
-                self.message(f'Profile loaded for editing. Execution unavailable: {exc}')
-        except Exception as exc:
-            self.profile_label.setText(f'Profile could not be loaded: {path}')
-            self.error(exc)
+            raw = source.read_bytes()
+            preview = raw.decode('utf-8-sig')
+            auxiliary = auxiliary_document(raw, source, ROOT)
+            profile = None if auxiliary else load_snapshot(raw)
+            document = json.loads(preview)
+            execution_error = None
+            if profile and (profile.study is not None or profile.magnetic_core is not None):
+                try:
+                    parse_snapshot(raw)
+                except ValueError as exc:
+                    execution_error = str(exc)
+        except (OSError, ValueError, PhysicsConfigurationError) as exc:
+            self.error(f'Could not open {source.name}: {exc}')
+            return False
+        if confirm and not self.confirm_discard():
+            return False
+
+        self.source = None if template else source
+        self.template_name = self.template_choice.currentText()
+        self.dirty = False
+        self.raw = raw if profile else None
+        self.profile = profile
+        self.related_profiles = []
+        self.execution_error = execution_error
+        self.profile_text.setPlainText(preview)
+        self.read_generation += 1
+        if auxiliary:
+            message, self.related_profiles = auxiliary
+            self.profile_context = 'Research document'
+            self.execution_error = 'Research document. Choose a referenced profile or import a run profile.'
+            self.editor.clear_profile()
+            self.preview_toggle.setChecked(True)
+            self.message(message)
+        else:
+            self.editor.load_document(document)
+            self.profile_context = f'{profile.mode} · {profile.atom.species if profile.atom else "Rb85 (default)"}'
+            self.message(f'Profile loaded for editing. Execution unavailable: {execution_error}' if execution_error
+                         else 'Profile loaded. Edit inputs, then save a copy or run.')
+        self.refresh_profile_label()
+        self.refresh_result_context()
         self.update_controls()
+        return True
 
     def open_related_profile(self):
-        if self.active or not self.related_profiles or not self.confirm_discard():
+        if self.active or not self.related_profiles:
             return
         paths = [str(path) for path in self.related_profiles]
         selected, ok = QInputDialog.getItem(self, 'Referenced Run Profile', 'Select the input to open (no conversion):', paths, 0, False)
         if ok:
-            self.load_profile(Path(selected))
+            self.load_profile(Path(selected), confirm=True)
 
     def form_changed(self):
         if self.active:
@@ -190,11 +206,9 @@ class MainWindow(QMainWindow):
         self.notice.setProperty('severity', 'normal')
         self.execution_error = None
         self.raw = self.profile = None
-        self.diagnostics_text.clear()
-        self.diagnostics_summary.setText('Inputs changed. Previous diagnostics do not describe this draft; resolve again.')
-        self.clear_result()
-        self.profile_label.setText(f'{self.source or "New profile"} — unsaved edits')
-        self.stage.setText('Inputs changed — previous diagnostics and results cleared')
+        self.read_generation += 1
+        if self.result_directory is None:
+            self.stage.setText('Inputs changed — ready to validate')
         raw = None
         try:
             raw = self.editor.snapshot()
@@ -202,15 +216,19 @@ class MainWindow(QMainWindow):
             self.profile = load_snapshot(raw)
             self.raw = raw
             self.message('Inputs validated by the profile parser. Unsaved changes will be included in the next run snapshot.')
-            try:
-                parse_snapshot(raw)
-            except ValueError as exc:
-                self.execution_error = str(exc)
-                self.message(f'Valid editable profile; execution unavailable: {exc}')
+            if self.profile.study is not None or self.profile.magnetic_core is not None:
+                try:
+                    parse_snapshot(raw)
+                except ValueError as exc:
+                    self.execution_error = str(exc)
+                    self.message(f'Valid editable profile; execution unavailable: {exc}')
+            self.profile_context = f'{self.profile.mode} · {self.profile.atom.species if self.profile.atom else "Rb85 (default)"}'
         except Exception as exc:
             if raw is None:
                 self.profile_text.setPlainText('Draft is not executable. Correct the inputs.\n' + str(exc))
             self.error(exc)
+        self.refresh_profile_label()
+        self.refresh_result_context()
         self.update_controls()
 
     def edit_structure(self):
@@ -222,19 +240,12 @@ class MainWindow(QMainWindow):
         except (ValueError, TypeError) as exc:
             self.error(exc)
             return
-        presets = {}
-        for path in sorted((ROOT / 'examples').rglob('*.json')):
-            value = json.loads(path.read_text(encoding='utf-8-sig'))
-            if not isinstance(value, dict) or 'schema_version' not in value or 'fields' not in value:
-                continue
-            for key, section in value.items():
-                presets[f'{path.relative_to(ROOT / "examples")} / {key}'] = (key, section)
-        dialog = StructureDialog(document, presets, self)
+        dialog = StructureDialog(document, lambda: self.option_presets(all_sections=True), self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.editor.load_document(dialog.result_document)
             self.form_changed()
 
-    def option_presets(self):
+    def option_presets(self, *, all_sections=False):
         allowed = {'atom', 'environment', 'spectrum', 'execution', 'numerics', 'noise', 'temporal_doppler',
                    'radiative', 'lo_phase_reference', 'measurement', 'provenance', 'study', 'magnetic_core'}
         presets = {}
@@ -245,8 +256,9 @@ class MainWindow(QMainWindow):
                 continue
             if not isinstance(value, dict) or 'fields' not in value or 'mode' not in value:
                 continue
-            for key in allowed & value.keys():
-                if value[key] is not None:
+            keys = value.keys() if all_sections else allowed & value.keys()
+            for key in keys:
+                if all_sections or value[key] is not None:
                     presets.setdefault(key, {})[str(path.relative_to(ROOT / 'examples'))] = value[key]
         return presets
 
@@ -289,7 +301,7 @@ class MainWindow(QMainWindow):
                     stream.write(self.raw)
                 self.source = Path(path)
                 self.dirty = False
-                self.profile_label.setText(str(self.source))
+                self.refresh_profile_label()
                 self.message(f'Current validated profile saved: {path}')
                 self.update_controls()
             except OSError as exc:
@@ -305,13 +317,18 @@ class MainWindow(QMainWindow):
         self.read_generation += 1
         self.current_result_matches_draft = False
         self.result_directory = None
-        self.images = []
+        self.images = {}
+        self.result_profile = None
+        self.result_diagnostics = False
+        self.result_summary = None
         self.figure_choice.clear()
         self.image.clear()
         self.image.setText('No figure available.')
         self.report_text.clear()
         self.summary_table.setRowCount(0)
         self.result_label.setText('No completed run loaded.')
+        self.figure_feedback.clear()
+        self.figure_feedback.hide()
 
     def start_run(self, diagnostics):
         if self.active or self.reading or self.raw is None:
@@ -325,8 +342,7 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.error(exc)
             return
-        self.clear_result()
-        self.diagnostics_text.clear()
+        self.figure_focus.setChecked(False)
         self.run_directory = directory
         self.active = True
         self.stop_requested = False
@@ -487,19 +503,18 @@ class MainWindow(QMainWindow):
             try:
                 self.request_result(Path(path))
             except Exception as exc:
-                self.clear_result()
-                self.update_controls()
                 self.error(exc)
 
     def load_result(self, directory):
         """Synchronous entry for callers/tests; UI events use request_result."""
-        report, images = read_result(directory)
-        self.display_result(directory, report, images)
+        self.display_result(directory, *read_result(directory, capture=True))
 
     def request_result(self, directory):
+        if self.reading or self.active:
+            return
         from .result_reader import ReadResult
-        self.clear_result()
         self.reading = True
+        self.read_generation += 1
         generation = self.read_generation
         self.stage.setText('Verifying saved artifacts — ' + str(directory))
         self.message('Reading and verifying the completed run. No result is accepted before its files pass verification.')
@@ -511,42 +526,48 @@ class MainWindow(QMainWindow):
         self.update_controls()
         QThreadPool.globalInstance().start(task)
 
-    def result_verified(self, generation, report, images):
+    def result_verified(self, generation, result):
         self.reading = False
         if generation != self.read_generation:
             self.update_controls(); return
         try:
-            self.display_result(self.reader_directory, report, images)
+            self.display_result(self.reader_directory, *result)
             self.stage.setText('Completed — ' + str(self.reader_directory))
             self.progress.setValue(1)
         except Exception as exc:
-            self.clear_result(); self.error(exc)
+            self.error(exc)
             self.stage.setText('Failed — result could not be displayed')
         self.update_controls()
 
     def result_rejected(self, generation, message):
         self.reading = False
         if generation == self.read_generation:
-            self.clear_result(); self.error(message)
+            self.error(message)
             self.stage.setText('Failed — incomplete, incompatible or modified result')
         self.update_controls()
 
-    def display_result(self, directory, report, images):
-        self.clear_result()
-        self.result_directory = Path(directory)
-        self.current_result_matches_draft = (Path(directory) / 'profile.json').read_bytes() == self.raw
-        self.images = images
-        encoded = json.dumps(report, ensure_ascii=False, indent=2)
-        self.report_text.setPlainText(encoded)
-        if report['diagnostics_only']:
-            self.diagnostics_text.setPlainText(encoded)
-            self.diagnostics_summary.setText(f"Resolved {report.get('atom', {}).get('species', 'atom')} · {report.get('mode', 'profile')} · IF {report.get('signed_if_mhz', 'not reported')} MHz. No sensing was executed. See the original report below.")
+    def refresh_result_context(self):
+        self.current_result_matches_draft = self.raw is not None and self.raw == self.result_profile
+        if self.result_directory is not None:
+            relation = 'Matches current input' if self.current_result_matches_draft else 'Different input snapshot'
+            run_name = self.result_directory.name
+            if run_name.startswith('run-'):
+                run_name = run_name[:12]
+            self.result_label.setText(f'{self.result_summary}  ·  {run_name}  ·  {relation}')
+            self.result_label.setToolTip(str(self.result_directory))
+        if self.result_diagnostics and self.current_result_matches_draft:
+            self.diagnostics_text.setPlainText(self.report_text.toPlainText())
+            self.diagnostics_summary.setText(f'{self.result_summary}. No sensing was executed.')
+        else:
+            self.diagnostics_text.clear()
+            self.diagnostics_summary.setText('No diagnostics for the current input. Run Diagnostics to resolve its declared physics.')
+
+    def display_result(self, directory, report, profile, images):
         sensing = report.get('sensing')
-        summary = ('Diagnostics only — no sensing executed' if sensing is None else
+        summary = (f"Diagnostics · {report.get('atom', {}).get('species', 'Atom')} · IF {report.get('signed_if_mhz', 'not reported')} MHz" if sensing is None else
                    f"AoA: {sensing['estimated_aoa_deg']} deg  |  Input: {sensing['true_aoa_deg']} deg  |  IF: {report['signed_if_mhz']} MHz")
         if not report['diagnostics_only'] and report.get('measurement', {}).get('mode') == 'if_only':
             summary = f"IF-only measurement  |  IF: {report['signed_if_mhz']} MHz  |  DoA not requested"
-        self.result_label.setText(summary + '\n' + str(directory))
         rows = [('Measurement', 'Diagnostics only' if report['diagnostics_only'] else report.get('measurement', {}).get('mode', 'aoa').upper()),
                 ('Atomic species', report.get('atom', {}).get('species', 'Not reported')),
                 ('Resolution mode', report.get('mode', 'Not reported')),
@@ -561,21 +582,33 @@ class MainWindow(QMainWindow):
             if key in report: rows.append((key.replace('_', ' ').capitalize(), report[key]))
         rows.extend((('Output verification', 'Required artifacts match the manifest hashes'),
                      ('Scientific scope', 'Simulation result; no experimental validation is inferred')))
+        # Prepare the display before replacing the current result.
+        encoded = json.dumps(report, ensure_ascii=False, indent=2)
+        self.clear_result()
+        self.result_directory = Path(directory)
+        self.result_profile = profile
+        self.result_diagnostics = report['diagnostics_only']
+        self.result_summary = summary
+        self.images = images
+        self.report_text.setPlainText(encoded)
+        self.refresh_result_context()
         self.summary_table.setRowCount(len(rows))
         for index, (name, value) in enumerate(rows):
             self.summary_table.setItem(index, 0, QTableWidgetItem(name))
             self.summary_table.setItem(index, 1, QTableWidgetItem(str(value)))
         self.summary_table.verticalHeader().setMinimumSectionSize(26)
         self.summary_table.verticalHeader().setDefaultSectionSize(28)
-        self.figure_choice.addItems([p.stem.replace('_', ' ').title() for p in images])
+        self.figure_choice.addItems([Path(name).stem.replace('_', ' ').title() for name in images])
         self.message('Completed run verified against its artifact hashes. This is a simulation result, not experimental validation.')
         self.result_tabs.setCurrentIndex(0 if images else 1)
-        self.tabs.setCurrentIndex(1 if report['diagnostics_only'] else 3)
+        self.tabs.setCurrentIndex(1 if self.result_diagnostics and self.current_result_matches_draft else 3)
         self.update_controls()
 
     def show_image(self, index):
         if 0 <= index < len(self.images):
-            pixmap = QPixmap(str(self.images[index]))
+            name = list(self.images)[index]
+            pixmap = QPixmap()
+            pixmap.loadFromData(self.images[name], 'PNG')
             if pixmap.isNull():
                 self.image.setText('The saved figure could not be decoded.')
             else:
@@ -594,24 +627,37 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
         if hasattr(self, 'figure_zoom') and self.figure_zoom.currentText().startswith('Fit'):
             QTimer.singleShot(0, lambda: self.show_image(self.figure_choice.currentIndex()))
-        if hasattr(self, 'follow_log') and self.follow_log.isChecked():
-            QTimer.singleShot(0, lambda: self.log.verticalScrollBar().setValue(self.log.verticalScrollBar().maximum()))
 
     def set_figure_focus(self, focused):
-        for control in (self.navigation, self.page_headings[3], self.result_actions, self.result_label, self.bottom_status):
+        for control in (self.navigation, self.page_headings[3], self.result_actions, self.bottom_status):
             control.setVisible(not focused)
         QTimer.singleShot(0, lambda: self.show_image(self.figure_choice.currentIndex()))
 
     def save_figure(self):
         index = self.figure_choice.currentIndex()
-        if not 0 <= index < len(self.images): return
-        path, _ = QFileDialog.getSaveFileName(self, 'Save Scientific Figure Copy', self.images[index].name, 'PNG image (*.png)')
+        if not 0 <= index < len(self.images):
+            return
+        name = list(self.images)[index]
+        path, _ = QFileDialog.getSaveFileName(self, 'Save Scientific Figure Copy', name, 'PNG image (*.png)')
         if path:
             try:
-                with Path(path).open('xb') as stream: stream.write(self.images[index].read_bytes())
-                self.message(f'Figure copied without modifying the original: {path}')
+                with Path(path).open('xb') as stream:
+                    stream.write(self.images[name])
+                feedback = f'Figure saved to {Path(path).name}.'
+                self.message(feedback)
+                severity = 'info'
             except OSError as exc:
-                self.error(exc)
+                detail = ('A file already exists. Choose another name.' if isinstance(exc, FileExistsError)
+                          else exc.strerror or str(exc))
+                feedback = f'Could not save figure. {detail}'
+                self.error(feedback)
+                severity = 'error'
+            self.figure_feedback.setProperty('severity', severity)
+            self.figure_feedback.style().unpolish(self.figure_feedback)
+            self.figure_feedback.style().polish(self.figure_feedback)
+            self.figure_feedback.setText(feedback)
+            self.figure_feedback.show()
+            self.show_image(index)
 
     def open_folder(self):
         if self.result_directory:
