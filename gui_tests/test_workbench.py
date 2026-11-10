@@ -14,7 +14,7 @@ def test_task_sections_inline_error_and_preview_are_one_draft():
     app = QApplication.instance() or QApplication([])
     w = MainWindow(); w.show(); app.processEvents()
     assert w.navigation.currentItem().text() == 'Configure'
-    assert w.editor.sections.currentText() == 'Probe Laser'
+    assert w.editor.sections.currentItem().text() == 'Probe Laser'
     control = w.editor.controls[('fields', 'probe', 'power_mw')]
     control.setFocus(); control.selectAll(); QTest.keyClicks(control, 'not-a-number')
     assert w.raw is None and not w.sensing_button.isEnabled()
@@ -78,9 +78,9 @@ def test_late_artifact_read_cannot_replace_a_changed_draft(tmp_path, monkeypatch
     app = QApplication.instance() or QApplication([])
     import raqs_gui.result_reader as reader
     gate = threading.Event()
-    def delayed_read(directory):
+    def delayed_read(directory, *, capture):
         assert gate.wait(5)
-        return {'diagnostics_only': True}, []
+        return {'diagnostics_only': True}, b'{}', {}
     monkeypatch.setattr(reader, 'read_result', delayed_read)
     w = MainWindow(); w.request_result(tmp_path)
     w.editor.controls[('fields', 'probe', 'power_mw')].setText('0.0002')

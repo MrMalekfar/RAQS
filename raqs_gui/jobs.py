@@ -91,8 +91,8 @@ def digest(path):
     return checksum.hexdigest()
 
 
-def read_result(directory):
-    """Only GUI manifests with complete, unmodified files are accepted."""
+def read_result(directory, *, capture=False):
+    """Verify a GUI manifest. Capture binds the UI to the bytes verified here."""
     directory = Path(directory)
     if (directory / 'interrupted.json').exists():
         raise ValueError('This run was interrupted. Its partial artifacts are not a completed result.')
@@ -102,15 +102,30 @@ def read_result(directory):
     files = manifest.get('files')
     if not isinstance(files, dict) or not {'profile.json', 'run_report.json'} <= files.keys():
         raise ValueError('The run is missing its input or report receipt.')
+    content = {}
+    images = []
     for name, checksum in files.items():
         if not isinstance(name, str) or Path(name).name != name or '/' in name or '\\' in name:
             raise ValueError('Invalid run artifact path.')
         path = directory / name
-        if path.is_symlink() or digest(path) != checksum:
+        if path.is_symlink():
             raise ValueError(f'Missing or modified run artifact: {name}')
-    report = json.loads((directory / 'run_report.json').read_text(encoding='utf-8'))
+        is_image = name.endswith('.png')
+        if name == 'run_report.json' or (capture and (name == 'profile.json' or is_image)):
+            data = path.read_bytes()
+            content[name] = data
+            actual = hashlib.sha256(data).hexdigest()
+        else:
+            actual = digest(path)
+        if actual != checksum:
+            raise ValueError(f'Missing or modified run artifact: {name}')
+        if is_image:
+            images.append(path)
+    report = json.loads(content['run_report.json'].decode('utf-8'))
     if type(report.get('diagnostics_only')) is not bool:
         raise ValueError('Invalid run report: diagnostics_only must be boolean.')
     if not report['diagnostics_only'] and 'simulation_arrays.npz' not in files:
         raise ValueError('A sensing run is missing its numerical arrays.')
-    return report, [directory / name for name in files if name.endswith('.png')]
+    if capture:
+        return report, content['profile.json'], {path.name: content[path.name] for path in images}
+    return report, images

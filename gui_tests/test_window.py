@@ -29,10 +29,12 @@ def test_profile_state_rejects_invalid_input_and_active_window_close(tmp_path):
     assert not window.open_button.isEnabled()
     assert not window.close()
     window.active = False
+    window.update_controls()
     invalid = tmp_path / 'invalid.json'
     invalid.write_text('{}')
-    window.load_profile(invalid)
-    assert window.raw is None and not window.diagnostic_button.isEnabled()
+    snapshot = window.raw
+    assert not window.load_profile(invalid)
+    assert window.raw == snapshot and window.diagnostic_button.isEnabled()
     assert 'Error:' in window.notice.text()
     window.close()
 
