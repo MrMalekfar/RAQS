@@ -70,6 +70,9 @@ def calculate_absorption_constant(
         omega_p_rad_per_s = acfg.OMEGA_P * params.US_TO_S_FACTOR
     if n0_m3 is None:
         n0_m3 = _CONST_SI.N0
+        if n0_m3 is None:
+            from ...exceptions import PhysicsConfigurationError
+            raise PhysicsConfigurationError('ATOM-001: configure the atom before reading the default number density.')
     if cell_length_m is None:
         cell_length_m = params.CELL_LENGTH
     if lambda_p_m is None:

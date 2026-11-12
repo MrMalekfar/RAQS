@@ -1,151 +1,99 @@
-"""Phase-0 frozen-baseline regression tests (RF-006 coverage migration).
+"""Current prepared-channel regression using frozen inputs and independent checks."""
 
-Protects the physics-critical scalar chain end-to-end through the PUBLIC
-pipeline, using exactly the same accessor paths as _phase0_capture.py so the
-test and the frozen snapshot can never diverge in methodology.
-
-Reference: phase0_baseline.json (Phase 0, P0 refactor plan). Repeated Phase-0
-captures were bitwise identical and post-RF captures compared IDENTICAL
-(max_abs=0.000e+00); exact equality is therefore the observationally
-established criterion. Relative tolerance 1e-9 (1e-6 for the solver-derived
-steady-state block) guards only JSON/float round-trip drift -- never physics.
-"""
+import hashlib
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 import pytest
+from scipy.constants import epsilon_0, hbar
 
-BASELINE_PATH = os.path.join(os.path.dirname(__file__), "..", "phase0_baseline.json")
+from rydberg_aoa.config.run_profile import load_run_profile
+from rydberg_aoa.simulation.profile_execution import execute_profile
+from tests.test_lab007_profile_integration import isolated
 
-LEVEL_FIELDS = ('n', 'l', 'j', 'f', 'mj', 'mf', 'energy', 'label')
-
-
-def _load_baseline():
-    """Load the frozen baseline snapshot; fail loudly if missing."""
-    with open(os.path.abspath(BASELINE_PATH), "r", encoding="utf-8") as fh:
-        return json.load(fh)
+FIXTURE = Path(__file__).parent / 'fixtures/profile_schema_v1/prescribed_reference.json'
+FIXTURE_SHA256 = '4188cbebe7c62d9b08a1e19f73db73bea18694c8470161b3343847a74dd5819b'
 
 
-@pytest.fixture(scope="module")
-def baseline():
-    return _load_baseline()
+@pytest.fixture
+def prepared_atomic_physics(isolated):
+    from rydberg_aoa.config import atomic_config as ac
+
+    raw = FIXTURE.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == FIXTURE_SHA256
+    execute_profile(load_run_profile(FIXTURE, raw=raw), diagnostics_only=True)
+    return ac
 
 
-def _atomic_config():
-    # ARCH-001T: importing atomic_config publishes nothing; every test that
-    # calls this helper requests the explicit ``atomic_physics`` fixture,
-    # which runs the ARCH-001 seam (or skips with BLOCKED: QN-001A).
-    from rydberg_aoa.config import atomic_config as acfg
-    return acfg
+def test_declared_states_and_downward_rf(prepared_atomic_physics):
+    ac = prepared_atomic_physics
+    data = json.loads(FIXTURE.read_bytes())
+    for role, expected in data['ladder'].items():
+        assert {key: ac.ATOMIC_LEVELS[role][key] for key in expected} == expected
+    orientation = ac.get_rf_orientation()
+    assert orientation.direction == -1
+    lo = data['fields']['lo']
+    signal = data['fields']['signal']
+    assert ac.OMEGA_RF_BASE / ac.OMEGA_SIGNAL_RF_BASE == pytest.approx(
+        lo['electric_field_vm'] / signal['electric_field_vm'], rel=1e-9)
+    assert ac.DELTA_RF == pytest.approx(
+        2 * np.pi * (lo['frequency_hz'] - abs(orientation.signed_frequency_hz)) / 1e6, rel=1e-9)
 
 
-def test_level_selection_unchanged(baseline, atomic_physics):
-    """ATOMIC_LEVELS (n, l, j, f, mj, mf, E, label) match the frozen snapshot."""
-    acfg = _atomic_config()
-    exp = baseline['levels']
-    for key in ('ground', 'excited', 'rydberg1', 'rydberg2'):
-        for field in LEVEL_FIELDS:
-            got = acfg.ATOMIC_LEVELS[key].get(field)
-            want = exp[key][field]
-            if isinstance(want, float):
-                assert got == pytest.approx(want, rel=1e-9), (
-                    f"ATOMIC_LEVELS[{key}][{field}] drifted")
-            else:
-                assert got == want, f"ATOMIC_LEVELS[{key}][{field}] drifted"
-
-
-def test_wavelengths_unchanged(baseline, atomic_physics):
-    """lambda_p [m] from SI constants; lambda_c [nm] from optimized LASER_PARAMS."""
-    _atomic_config()
+def test_absorption_prefactors_follow_si_contract(prepared_atomic_physics):
     from rydberg_aoa.config import parameters as params
-    from rydberg_aoa.config.laser_rf_config import LASER_PARAMS
-    # lambda_p: authoritative dynamic value updated during import (capture path)
-    assert float(params.SI_Constants.LAMBDA_P) == pytest.approx(
-        baseline['probe_lambda_m'], rel=1e-9)
-    # lambda_c: overwritten at import with the optimizer-calculated coupling value
-    assert float(LASER_PARAMS['coupling']['wavelength_nm']) == pytest.approx(
-        baseline['coupling_wavelength_nm'], rel=1e-9)
+    from rydberg_aoa.physics.susceptibility.absorption_const import calculate_absorption_constant
+
+    ac = prepared_atomic_physics
+    probe = json.loads(FIXTURE.read_bytes())['fields']['probe']
+    dipole = ac.get_cached_dipole_matrix()['probe']['dipole_si']
+    density = ac.ATOM.getNumberDensity(params.VAPOR_CELL_TEMPERATURE_K)
+    od, susceptibility = calculate_absorption_constant()
+    assert od == pytest.approx(np.pi * params.CELL_LENGTH / (probe['wavelength_nm'] * 1e-9), rel=1e-6)
+    assert susceptibility == pytest.approx(
+        -2 * density * dipole**2 / (epsilon_0 * hbar * ac.OMEGA_P * 1e6), rel=1e-6)
 
 
-def test_dipoles_unchanged(baseline, atomic_physics):
-    """ARC dipole matrix mu_ij [C*m] from the public self-healing cache."""
-    acfg = _atomic_config()
-    dm = acfg.get_cached_dipole_matrix()
-    assert dm, "dipole matrix cache empty"
-    for t in ('probe', 'coupling', 'rf'):
-        assert dm[t]['dipole_si'] == pytest.approx(
-            baseline['dipoles_si'][t], rel=1e-9), f"mu_{t} drifted"
-
-
-def test_decay_and_rabi_unchanged(baseline, atomic_physics):
-    """Gamma_21/32/43 and Omega_P/C/RF_BASE/SIGNAL [rad/us] vs frozen values."""
-    acfg = _atomic_config()
-    for name in ('GAMMA_21', 'GAMMA_32', 'GAMMA_43'):
-        assert getattr(acfg, name) == pytest.approx(
-            baseline['gammas_rad_per_us'][name], rel=1e-9), f"{name} drifted"
-    for name in ('OMEGA_P', 'OMEGA_C', 'OMEGA_RF_BASE', 'OMEGA_SIGNAL_RF_BASE'):
-        assert getattr(acfg, name) == pytest.approx(
-            baseline['omegas_rad_per_us'][name], rel=1e-9), f"{name} drifted"
-
-
-def test_detunings_including_valid_zero_unchanged(baseline, atomic_physics):
-    """Delta_p/Delta_rf match; Delta_c == 0.0 is a valid zero (RF-003 contract)."""
-    acfg = _atomic_config()
-    dp, dc, drf = acfg.get_cached_detunings()
-    exp = baseline['detunings_rad_per_us']
-    assert dp == pytest.approx(exp['delta_p'], rel=1e-9)
-    assert dc == pytest.approx(exp['delta_c'], abs=0.0)  # valid zero preserved
-    assert drf == pytest.approx(exp['delta_rf'], rel=1e-9)
-
-
-def test_dephasing_unchanged(baseline, atomic_physics):
-    """gamma_2/3/4 dephasing rates [rad/us] via the public Lindblad helper."""
-    from rydberg_aoa.physics.lindblad import calculate_dephasing_rates
-    g2, g3, g4 = calculate_dephasing_rates()
-    exp = baseline['dephasing_rates_rad_per_us']
-    assert g2 == pytest.approx(exp[0], rel=1e-9)
-    assert g3 == pytest.approx(exp[1], rel=1e-9)
-    assert g4 == pytest.approx(exp[2], rel=1e-9)
-
-
-def test_absorption_constants_unchanged(baseline, atomic_physics):
-    """(od_factor, K_chi) from the susceptibility absorption helper."""
-    from rydberg_aoa.physics.susceptibility.absorption_const import (
-        calculate_absorption_constant)
-    od, kchi = calculate_absorption_constant()
-    exp = baseline['absorption']
-    assert od == pytest.approx(exp['od_factor'], rel=1e-6)
-    assert kchi == pytest.approx(exp['K_chi'], rel=1e-6)
-
-
-@pytest.mark.slow
-def test_steady_state_observables_unchanged(baseline, atomic_physics):
-    """End-to-end Liouvillian check at Delta_p + {0, 2*pi*6 MHz} (capture method)."""
-    from qutip import steadystate
+def test_steady_density_at_declared_and_offset_probe(prepared_atomic_physics):
+    from qutip import liouvillian, steadystate
     from rydberg_aoa.physics.hamiltonian import create_sensor_model
     from rydberg_aoa.physics.lindblad import calculate_dephasing_rates
-    from rydberg_aoa.physics.susceptibility.calculate_transmission_from_rho21 import (
-        calculate_transmission_from_rho21)
-    _atomic_config()
-    om = baseline['omegas_rad_per_us']
-    de = baseline['detunings_rad_per_us']
-    ga = baseline['gammas_rad_per_us']
-    dephasing = list(calculate_dephasing_rates())
-    for label, dr_mhz in (('res', 0.0), ('off', 6.0)):
-        # Delta_p offset: resonance run uses the cached Delta_p, off-resonance
-        # shifts by 2*pi*6 MHz (angular conversion, as in the frozen capture).
-        dr_rad = 2 * np.pi * dr_mhz
-        H, c_ops, obs = create_sensor_model(
-            om['OMEGA_P'], om['OMEGA_C'], om['OMEGA_RF_BASE'],
-            de['delta_p'] + dr_rad, de['delta_c'], de['delta_rf'],
-            [ga['GAMMA_21'], ga['GAMMA_32'], ga['GAMMA_43']],
-            dephasing,
-        )
-        rho_ss = steadystate(H, c_ops)
-        r21 = (obs * rho_ss).tr()
-        T = calculate_transmission_from_rho21(r21)
-        exp = baseline['steady_state'][label]
-        assert np.real(r21) == pytest.approx(exp['rho21_re'], rel=1e-6)
-        assert np.imag(r21) == pytest.approx(exp['rho21_im'], rel=1e-6)
-        assert T == pytest.approx(exp['transmission'], rel=1e-6)
+    from rydberg_aoa.physics.lindblad.calculate_transit_rate import calculate_transit_rate_per_us
+    from rydberg_aoa.utils.validation import validate_steady_state
+
+    ac = prepared_atomic_physics
+    omegas = np.array([ac.OMEGA_P, ac.OMEGA_C, ac.OMEGA_RF_BASE])
+    decay = [ac.GAMMA_21, ac.GAMMA_32, ac.GAMMA_43]
+    dephasing = calculate_dephasing_rates()
+    transit = calculate_transit_rate_per_us()
+    basis = np.eye(16).reshape(16, 4, 4)
+    ground = basis[0]
+    jumps_with_rates = list(zip(((0, 1), (1, 2), (3, 2), (1, 1), (2, 2), (3, 3)),
+                                [*decay, *dephasing]))
+    for offset_mhz in (0., 6.):
+        dp = ac.DELTA_P + 2 * np.pi * offset_mhz
+        dc, drf = ac.DELTA_C, ac.DELTA_RF
+        h, jumps, _ = create_sensor_model(
+            *omegas, dp, dc, drf, decay, dephasing, transit_rate_per_us=transit,
+            rf_orientation=ac.get_rf_orientation())
+        rho = steadystate(h, jumps)
+        validate_steady_state(rho, liouvillian(h, jumps),
+                              context='prepared-channel regression', backend='qutip')
+
+        # Independent matrix-unit construction and trace-constrained solve.
+        reference_h = np.diag([0., dp, dp + dc, dp + dc - drf])
+        reference_h -= (np.diag(omegas, 1) + np.diag(omegas, -1)) / 2
+        columns = []
+        for unit in basis:
+            derivative = -1j * (reference_h @ unit - unit @ reference_h)
+            derivative += transit * (ground * np.trace(unit) - unit)
+            for (target, source), rate in jumps_with_rates:
+                derivative[target, target] += rate * unit[source, source]
+                derivative[source, :] -= rate * unit[source, :] / 2
+                derivative[:, source] -= rate * unit[:, source] / 2
+            columns.append(derivative.ravel())
+        system = np.column_stack(columns)
+        system[0] = np.eye(4).ravel()
+        expected = np.linalg.solve(system, ground.ravel()).reshape(4, 4)
+        assert rho.full() == pytest.approx(expected, rel=1e-6, abs=1e-12)

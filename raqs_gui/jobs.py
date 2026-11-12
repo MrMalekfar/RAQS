@@ -2,7 +2,8 @@
 import hashlib
 import json
 from pathlib import Path
-import tempfile
+
+from rydberg_aoa.simulation.run_receipt import digest, write_json
 
 
 def auxiliary_document(raw, source, repository):
@@ -52,11 +53,7 @@ def auxiliary_document(raw, source, repository):
 def load_snapshot(raw):
     # Use the canonical strict loader on the exact bytes shown by the UI.
     from rydberg_aoa.config.run_profile import load_run_profile
-    with tempfile.TemporaryDirectory(prefix='raqs-profile-') as temporary:
-        path = Path(temporary) / 'profile.json'
-        path.write_bytes(raw)
-        profile = load_run_profile(path)
-    return profile
+    return load_run_profile('GUI profile snapshot', raw=raw)
 
 
 def parse_snapshot(raw):
@@ -64,13 +61,6 @@ def parse_snapshot(raw):
     if profile.study is not None or profile.magnetic_core is not None:
         raise ValueError('This prototype supports ordinary single profiles only; study and magnetic-core profiles are not executed.')
     return profile
-
-
-def write_json(path, document):
-    path = Path(path)
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(document, ensure_ascii=False, allow_nan=False, indent=2) + '\n', encoding='utf-8')
-    temporary.replace(path)
 
 
 def prepare_run(directory, raw, diagnostics):
@@ -81,14 +71,6 @@ def prepare_run(directory, raw, diagnostics):
     directory.mkdir(parents=True, exist_ok=False)
     (directory / 'profile.json').write_bytes(raw)
     write_json(directory / 'status.json', {'schema_version': 1, 'state': 'starting'})
-
-
-def digest(path):
-    checksum = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b''):
-            checksum.update(block)
-    return checksum.hexdigest()
 
 
 def read_result(directory, *, capture=False):

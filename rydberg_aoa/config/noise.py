@@ -131,6 +131,8 @@ class NoiseConfig:
 def parse_noise_config(document):
     """Strict versioned block; unknown sources never become ignored options."""
     version = document.get('schema_version') if isinstance(document, dict) else None
+    if type(version) is int and version == 4:
+        return _parse_unified_noise(document)
     keys = ('schema_version', 'enabled', 'seed', 'trials', 'sources')
     extra = (('detector',) if type(version) is int and version == 2 else
              ('drive', 'readout') if type(version) is int and version == 3 else ())
@@ -169,6 +171,33 @@ def parse_noise_config(document):
     spec = _object(raw['readout_gaussian'], ('enabled', 'sigma_observable'), 'readout_gaussian')
     return NoiseConfig(data['enabled'], data['seed'], data['trials'],
                        (NoiseSource('readout_gaussian', GaussianReadout(**spec)),), data['schema_version'])
+
+
+def _parse_unified_noise(document):
+    """Map the wire format onto the existing, tested drive/readout models."""
+    data = _object(document, ('schema_version', 'enabled', 'seed', 'trials', 'drive', 'readout'), 'noise')
+    _flag(data['enabled'], 'enabled')
+    campaign = {name: data[name] for name in ('seed', 'trials')}
+    drive, readout = data['drive'], data['readout']
+    if drive is None and readout is None:
+        raise PhysicsConfigurationError('NOISE-001: declare a drive or readout model, or omit noise.')
+    if readout is not None:
+        model = readout.get('model') if isinstance(readout, dict) else None
+        if model not in ('gaussian', 'pin'):
+            raise PhysicsConfigurationError('NOISE-001: readout model must be gaussian or pin.')
+        keys = ('model', 'sources') + (('detector',) if model == 'pin' else ())
+        if drive is not None:
+            keys += ('enabled',)
+        readout = dict(_object(readout, keys, 'noise.readout'))
+        readout.pop('model')
+        if drive is None:
+            readout['enabled'] = data['enabled']
+        readout.update(campaign, schema_version=1 if model == 'gaussian' else 2)
+    if drive is None:
+        return parse_noise_config(readout)
+    drive = _object(drive, ('settings', 'sources'), 'noise.drive')
+    return parse_noise_config({**campaign, 'schema_version': 3, 'enabled': data['enabled'],
+                               'drive': drive['settings'], 'sources': drive['sources'], 'readout': readout})
 
 
 def require_noise_execution_supported(config):

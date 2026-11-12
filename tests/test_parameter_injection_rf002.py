@@ -1,22 +1,5 @@
-"""RF-002 focused regression tests: parameter injection into
-``calculate_dephasing_rates`` and ``calculate_absorption_constant``.
+"""RF-002: explicit parameter injection and isolation on a prepared channel."""
 
-Proves the four mandatory RF-002 properties:
-
-1. Backward compatibility — zero-arg default calls reproduce the frozen
-   Phase 0 baseline exactly (full-precision literals embedded verbatim
-   from ``phase0_baseline.json``, captured BEFORE any P0 refactor edit).
-2. Injection equivalence — explicit arguments equal to the
-   configuration-sourced defaults produce bit-identical outputs.
-3. Dependency isolation — injected values drive ONLY the expected
-   calculation terms and never mutate global/module state.
-4. Physical baseline preservation (externally cross-checked by running
-   ``_phase0_capture.py`` vs ``phase0_baseline.json``).
-
-Comparison methodology: the repository's established Phase 0 convention
-(max abs difference <= 1e-12); exact/bitwise equality where the code
-path is provably identical.
-"""
 import copy
 
 import numpy as np
@@ -32,42 +15,15 @@ from rydberg_aoa.physics.susceptibility import absorption_const as absm
 from rydberg_aoa.physics.susceptibility.absorption_const import \
     calculate_absorption_constant
 
-# Frozen pre-P0 values (verbatim from phase0_baseline.json):
-# [γ₂, γ₃, γ₄] dephasing [rad/μs]; od_factor [—]; K_chi [s⁻¹]
-_BASELINE_DEPHASING = [6.73698043619516, 6.73698243912782, 6.7306992538206405]
-_BASELINE_OD_FACTOR = 402643.6365420723
-_BASELINE_K_CHI = -0.0002536156280429006
+from tests.test_physics_baseline_regression import prepared_atomic_physics, isolated
 
-PHASE0_ATOL = 1e-12  # established Phase 0 absolute tolerance
+INJECTION_ATOL = 1e-12
 
 
-# ---------------------------------------------------------------------------
-# Test 1 — Backward compatibility vs frozen baseline
-# ---------------------------------------------------------------------------
-class TestBackwardCompatibilityBaseline:
-    """Zero-arg calls must reproduce the pre-refactor frozen numbers."""
-
-    def test_dephasing_default_matches_phase0(self, atomic_physics):
-        # Default (global-fed) call reproduces the frozen [γ₂, γ₃, γ₄]
-        got = calculate_dephasing_rates()
-        np.testing.assert_allclose(
-            got, _BASELINE_DEPHASING, rtol=0, atol=PHASE0_ATOL,
-            err_msg="dephasing default path drifted from Phase 0 baseline")
-
-    def test_absorption_default_matches_phase0(self, atomic_physics):
-        # Default path resolves μ₂₁ via validated Dipole Cache V2.
-        od_factor, k_chi = calculate_absorption_constant()
-        assert abs(od_factor - _BASELINE_OD_FACTOR) <= PHASE0_ATOL
-        assert abs(k_chi - _BASELINE_K_CHI) <= PHASE0_ATOL
-
-
-# ---------------------------------------------------------------------------
-# Test 2 — Explicit parameter injection equivalence
-# ---------------------------------------------------------------------------
 class TestInjectionEquivalence:
     """Explicit args equal to config defaults => bit-identical outputs."""
 
-    def test_dephasing_full_injection_is_bit_identical(self, atomic_physics):
+    def test_dephasing_full_injection_is_bit_identical(self, prepared_atomic_physics):
         # Every implicit input pulled from its legacy source and supplied
         # explicitly; identical operands through the identical code path
         # MUST yield identical bits.
@@ -86,7 +42,7 @@ class TestInjectionEquivalence:
             injected, default,
             err_msg="explicit dephasing injection altered the result")
 
-    def test_absorption_full_injection_is_bit_identical(self, atomic_physics):
+    def test_absorption_full_injection_is_bit_identical(self, prepared_atomic_physics):
         # μ₂₁ from the same cache entry the default path consumes;
         # ω_p mirrored with the function's own conversion
         # (ω_p[rad/s] = Ω_P[rad/μs] × 10⁶).
@@ -132,7 +88,7 @@ class TestDependencyIsolation:
         return snap
 
     def test_dephasing_no_global_mutation_and_expected_response(
-            self, atomic_physics):
+            self, prepared_atomic_physics):
         before = self._snapshot()
         default = np.asarray(calculate_dephasing_rates(), dtype=float)
 
@@ -144,7 +100,7 @@ class TestDependencyIsolation:
         #     has moved to the reset channel and is no longer part of γ₂).
         injected = calculate_dephasing_rates(gamma_probe_linewidth=1000.0)
         delta = injected[0] - default[0]
-        assert abs(delta - (1000.0 - params.GAMMA_PROBE_LINEWIDTH)) <= PHASE0_ATOL
+        assert abs(delta - (1000.0 - params.GAMMA_PROBE_LINEWIDTH)) <= INJECTION_ATOL
 
         # (c) DPH-002B contract migration — transit left the pure-dephasing
         #     budget and is now the loss/reset channel.
@@ -173,7 +129,7 @@ class TestDependencyIsolation:
         assert self._snapshot() == before
 
     def test_absorption_no_global_mutation_and_injection_bypasses_cache(
-            self, atomic_physics):
+            self, prepared_atomic_physics):
         before = self._snapshot()
         default_od, default_kchi = calculate_absorption_constant()
 

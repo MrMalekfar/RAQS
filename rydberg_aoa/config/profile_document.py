@@ -14,6 +14,26 @@ def noise_document(noise):
     return data
 
 
+def unified_noise_document(data):
+    """Translate a validated legacy noise document without changing its values."""
+    if data['schema_version'] == 4:
+        return data
+    version = data['schema_version']
+    drive = {'settings': data['drive'], 'sources': data['sources']} if version == 3 else None
+    legacy_readout = data['readout'] if version == 3 else data
+    readout = None
+    if legacy_readout is not None:
+        pin = legacy_readout['schema_version'] == 2
+        readout = {'model': 'pin' if pin else 'gaussian',
+                   'sources': legacy_readout['sources']}
+        if drive is not None:
+            readout['enabled'] = legacy_readout['enabled']
+        if pin:
+            readout['detector'] = legacy_readout['detector']
+    return {**{key: data[key] for key in ('enabled', 'seed', 'trials')},
+            'schema_version': 4, 'drive': drive, 'readout': readout}
+
+
 def profile_document(profile):
     """Return standard JSON-compatible data; no ARC or state writes.
 
@@ -21,7 +41,7 @@ def profile_document(profile):
     profiles contain uniform time/DoA grids; unsupported programmatic grids
     fail rather than being changed during persistence.
     """
-    version = 2 if profile.environment is not None else 1
+    version = profile.schema_version
     data = {'schema_version': version, 'mode': profile.mode,
             'fields': {k: asdict(getattr(profile,k)) for k in ('probe','coupling','lo','signal')},
             'optical_energy_convention': 'fs_centroid'}
@@ -53,7 +73,8 @@ def profile_document(profile):
     else:
         data.update(ladder=profile.request.level_mappings(), quantization_axis=profile.quantization_axis)
     if version == 2:
-        data.update(environment=asdict(profile.environment),
+        data.update(environment=asdict(profile.environment) if profile.environment is not None else None,
+                    execution=None,
                     spectrum=asdict(profile.spectrum) if profile.spectrum is not None else None)
         if profile.spectrum is not None and profile.spectrum.steady_state_backend is None:
             del data['spectrum']['steady_state_backend']
@@ -94,7 +115,7 @@ def profile_document(profile):
     if profile.temporal_doppler is not None:
         data['temporal_doppler'] = asdict(profile.temporal_doppler)
     if profile.noise is not None:
-        data['noise'] = noise_document(profile.noise)
+        data['noise'] = unified_noise_document(noise_document(profile.noise))
     if profile.provenance is not None:
         data['provenance'] = asdict(profile.provenance)
     if profile.measurement is not None:

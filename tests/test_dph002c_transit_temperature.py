@@ -29,7 +29,7 @@ def _oracle(T):
 # ---------------------------------------------------------------------------
 # TEST 1 — default follows the production temperature
 # ---------------------------------------------------------------------------
-def test_default_follows_production_temperature():
+def test_default_follows_production_temperature(configured_atom):
     expected = _oracle(params.VAPOR_CELL_TEMPERATURE_K)
     assert calculate_transit_rate_per_us() == pytest.approx(expected, rel=1e-12)
 
@@ -37,7 +37,7 @@ def test_default_follows_production_temperature():
 # ---------------------------------------------------------------------------
 # TEST 2 — explicit temperature overrides the default
 # ---------------------------------------------------------------------------
-def test_explicit_temperature_override():
+def test_explicit_temperature_override(configured_atom):
     T_test = 320.0
     assert calculate_transit_rate_per_us(temperature_k=T_test) == \
         pytest.approx(_oracle(T_test), rel=1e-12)
@@ -46,7 +46,7 @@ def test_explicit_temperature_override():
 # ---------------------------------------------------------------------------
 # TEST 3 — production-temperature ownership (main regression guard)
 # ---------------------------------------------------------------------------
-def test_default_tracks_patched_production_temperature(monkeypatch):
+def test_default_tracks_patched_production_temperature(configured_atom, monkeypatch):
     # Patch ONLY the production owner. The duplicated constants value (300.15)
     # is deliberately left untouched; if the helper ever reverted to it, the
     # default rate would stay at the 300.15 value and could NOT match the
@@ -59,7 +59,7 @@ def test_default_tracks_patched_production_temperature(monkeypatch):
 # ---------------------------------------------------------------------------
 # TEST 4 — the oracle is NOT the duplicated constant
 # ---------------------------------------------------------------------------
-def test_oracle_is_not_duplicated_constant():
+def test_oracle_is_not_duplicated_constant(configured_atom):
     """Structural guard: this module derives expectations exclusively from
     the PRODUCTION temperature owner (parameters), never from the duplicated
     constants.VAPOR_CELL_TEMPERATURE_K. (The project k_B constant is a

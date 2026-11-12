@@ -165,15 +165,15 @@ def test_actual_noisy_profile_entry_and_saved_provenance(tmp_path, mode):
     profile = tmp_path / 'profile.json'
     profile.write_text(json.dumps(data))
     process = subprocess.run([sys.executable, '-B', 'main.py', '--profile', str(profile),
-        '--no-plots', '--output-dir', str(tmp_path)], cwd=ROOT, capture_output=True,
+        '--no-plots', '--output-dir', str(tmp_path / 'run')], cwd=ROOT, capture_output=True,
         text=True, encoding='utf-8', errors='replace', timeout=180)
     assert process.returncode == 0, process.stdout + process.stderr
-    report = json.loads((tmp_path / 'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path / 'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['noise_included'] and report['noise_status'] == 'applied'
     assert report['readout_noise']['trials_executed'] == 1
     assert report['applied_fields'] == data['fields']
     assert not report['readout_noise']['spectrum_readout_noise_applied']
-    with np.load(tmp_path / 'simulation_arrays.npz', allow_pickle=False) as arr:
+    with np.load(tmp_path / 'run' / 'simulation_arrays.npz', allow_pickle=False) as arr:
         assert np.array_equal(arr['time_traces'], arr['clean_time_traces'] + arr['additive_readout_noise'])
         assert not np.array_equal(arr['time_traces'], arr['clean_time_traces'])
         for index in range(len(arr['time_traces'])):

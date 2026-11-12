@@ -55,6 +55,14 @@ def resolve_profile_medium(profile, ac):
     return medium, profile.run_config.resolve(dephasing, transit)
 
 
+def spectrum_arrays(spectrum):
+    """Select only declared numerical spectrum fields for NPZ export."""
+    keys = ('probe_offsets_mhz', 'base_detunings_rad_per_us', 'dephasing_rates_per_us',
+            'transit_rate_per_us', 'transmission_prefactors', 'rf_off', 'rf_on',
+            'rf_off_analytical', 'rf_on_analytical')
+    return {'spectrum_' + key: spectrum[key] for key in keys if spectrum.get(key) is not None}
+
+
 def run_profile_spectrum(profile, config, medium, ac):
     """RF-off/on numerical spectra share the temporal model's rates and base detunings.
 

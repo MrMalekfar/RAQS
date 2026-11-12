@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.measurement import MeasurementOptions
 from rydberg_aoa.config.run_profile import parse_run_profile
 from rydberg_aoa.config.profile_document import profile_document
@@ -23,7 +25,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 def document(mode='prescribed'):
-    return json.loads((ROOT/f'examples/noise013/{mode}_null_pin.json').read_text())
+    return legacy_noise_profile((ROOT/f'examples/noise013/{mode}_null_pin.json'))
 
 
 @pytest.mark.parametrize('options',[{'mode':'if_only','signal_enabled':0},
@@ -136,7 +138,7 @@ def test_runner_signal_off_uses_zero_drive_no_doa_or_snapshot(isolation,monkeypa
 
 
 def test_null_colored_lo_campaign_is_supported_but_signal_noise_rejected(isolation,monkeypatch):
-    d=json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())['noise']
+    d=legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))['noise']
     d['trials']=2
     for name,s in d['sources'].items():s['enabled']=name=='rf_lo_amplitude'
     cfg=plan(measurement_mode='if_only',positions_m=((0.,0.,0.),));tasks=[]
@@ -152,17 +154,23 @@ def test_null_colored_lo_campaign_is_supported_but_signal_noise_rejected(isolati
             noise=parse_noise_config(d),measurement=MeasurementOptions('if_only',False))
 
 
-def test_if_only_export_has_no_object_angles_phase_or_spatial_covariance(tmp_path):
+@pytest.mark.parametrize('backend', ['direct', 'qutip'])
+def test_if_only_export_has_no_object_angles_phase_or_spatial_covariance(tmp_path, backend):
     from rydberg_aoa.simulation.profile_execution import save_profile_results
     t=trial([1+2j]);times=t['tlist'];trace=np.ones(len(times))
     a,xf,yf=extract_if_component(trace,times,.1)
     t.update(worker_records=[(a,xf,yf,0,trace)],time_traces=[trace],array_positions=np.zeros((1,3)),
         configured_spatial_phases_rad=np.zeros(1),xf_0=xf,yf_0=yf)
     t.pop('readout_noise')
+    t['spectrum'] = dict(steady_state_backend=backend, radiative_model={'model': 'prepared'},
+                         decay_rates_per_us={'2->1': 1.}, rf_on=np.array([.25, .5]))
     save_profile_results(tmp_path,t)
     data=np.load(tmp_path/'simulation_arrays.npz',allow_pickle=False)
     assert not set(data.files)&{'angles','power','element_phases_rad','if_snapshots','sample_covariance','trial_estimated_aoa_deg'}
     assert all(data[k].dtype.kind!='O' for k in data.files)
+    np.testing.assert_array_equal(data['spectrum_rf_on'], [.25, .5])
+    assert not {'spectrum_steady_state_backend', 'spectrum_radiative_model',
+                'spectrum_decay_rates_per_us'} & set(data.files)
 
 
 def _run(profile):
@@ -201,7 +209,7 @@ def test_actual_null_pin_profile_report_export_and_figures(tmp_path,mode):
 def test_actual_explicit_aoa_switch_on_is_bit_identical_to_existing_path():
     from concurrent.futures import ProcessPoolExecutor
     import multiprocessing
-    d=json.loads((ROOT/'examples/noise004/prescribed_pin.json').read_text());d['spectrum']=None
+    d=legacy_noise_profile((ROOT/'examples/noise004/prescribed_pin.json'));d['spectrum']=None
     d['noise']['trials']=1
     for s in d['noise']['sources'].values():s['enabled']=False
     old=parse_run_profile(d);new=replace(old,measurement=MeasurementOptions('aoa',True))

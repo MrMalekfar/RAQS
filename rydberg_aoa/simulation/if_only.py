@@ -114,7 +114,8 @@ def save_if_only_arrays(directory,result):
             arrays['trial_drive_'+key]=np.asarray([getattr(r,key) for r in realizations])
     spectrum=result.get('spectrum')
     if spectrum is not None:
-        arrays.update({'spectrum_'+k:v for k,v in spectrum.items() if v is not None and k != 'analytical_contract'})
+        from .profile_spectrum import spectrum_arrays
+        arrays.update(spectrum_arrays(spectrum))
     if any(np.asarray(v).dtype.kind not in 'iufc' or not np.isfinite(v).all() for v in arrays.values()):
         raise PhysicsCalculationError('NOISE-013: export requires finite numeric arrays; no object placeholders.')
     np.savez_compressed(directory/'simulation_arrays.npz',**arrays)

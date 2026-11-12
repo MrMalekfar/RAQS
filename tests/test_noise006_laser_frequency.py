@@ -12,6 +12,8 @@ import numpy as np
 import pytest
 import qutip as qt
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.noise import parse_noise_config
 from rydberg_aoa.exceptions import PhysicsConfigurationError, PhysicsCalculationError
 from rydberg_aoa.physics.hamiltonian import create_sensor_model
@@ -24,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def declaration():
-    return json.loads((ROOT/'examples/noise006/prescribed_laser_frequency.json').read_text())['noise']
+    return legacy_noise_profile((ROOT/'examples/noise006/prescribed_laser_frequency.json'))['noise']
 
 
 @pytest.mark.parametrize('field,bad', [('enabled', 1), ('stationary_std', True),
@@ -90,7 +92,7 @@ def test_stable_streams_toggles_prefix_and_pickle():
     extended = build_rf_realization(replace(cfg, trials=5, drive=replace(cfg.drive, horizon_us=240.)), trial=0)
     assert extended.probe_frequency_hz[:len(r.times_us)] == r.probe_frequency_hz
     # Appending laser sources cannot move the previously committed RF streams.
-    rf = json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())['noise']
+    rf = legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))['noise']
     original = build_rf_realization(parse_noise_config(rf), trial=0)
     rf['sources'].update(declaration()['sources'])
     mixed = build_rf_realization(parse_noise_config(rf), trial=0)
@@ -219,7 +221,7 @@ def test_real_output_grid_refinement_with_same_laser_path(monkeypatch):
 
 def test_common_laser_dispatch_and_single_readout_trial(isolation, monkeypatch):
     data = declaration()
-    data['readout'] = json.loads((ROOT/'examples/noise003/prescribed_campaign.json').read_text())['noise']
+    data['readout'] = legacy_noise_profile((ROOT/'examples/noise003/prescribed_campaign.json'))['noise']
     data['readout']['trials'] = data['trials']
     data['readout']['seed'] = data['seed']
     tasks = []
@@ -255,22 +257,20 @@ def test_real_cli_saved_laser_realization_and_fields(tmp_path, mode):
     filename = 'prescribed_laser_pin.json' if mode == 'prescribed_pin' else f'{mode}_laser_frequency.json'
     data = json.loads((ROOT/'examples/noise006'/filename).read_text())
     data['noise']['trials'] = 1
-    if mode == 'prescribed_pin':
-        data['noise']['readout']['trials'] = 1
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'; path.write_text(json.dumps(data))
-    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path)]
+    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path / 'run')]
     if mode != 'prescribed':
         args.append('--no-plots')
     proc = subprocess.run(args, cwd=ROOT, env=dict(os.environ, MPLBACKEND='Agg'),
         capture_output=True, text=True, errors='replace', timeout=240)
     assert proc.returncode == 0, proc.stdout+proc.stderr
-    report = json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['laser_frequency_noise_included'] and report['noise_included']
     assert not report['rf_drive_included'] and not report['spectrum_drive_noise_included']
     assert report['applied_fields'] == data['fields']
     expected = build_rf_realization(parse_noise_config(data['noise']), trial=0)
-    with np.load(tmp_path/'simulation_arrays.npz', allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz', allow_pickle=False) as a:
         assert np.array_equal(a['trial_laser_probe_frequency_hz'][0], expected.probe_frequency_hz)
         assert np.array_equal(a['trial_laser_integrated_phase_rad'][0],
                               [expected.laser_phase_at(t) for t in expected.times_us])
@@ -281,4 +281,4 @@ def test_real_cli_saved_laser_realization_and_fields(tmp_path, mode):
             assert np.array_equal(a['time_traces'], a['clean_time_traces']+a['additive_readout_noise'])
             assert a['trial_measured_current_a'].shape[0] == 1
     if mode == 'prescribed':
-        assert (tmp_path/'fig_laser_frequency_noise.png').is_file()
+        assert (tmp_path/'run' / 'fig_laser_frequency_noise.png').is_file()

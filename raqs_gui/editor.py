@@ -180,6 +180,8 @@ class ProfileEditor(QWidget):
             choices = [(name, name) for name in species_capabilities()['species']]
         elif key == 'doa_method':
             choices = [(name, name) for name in ('phase_beamforming', 'bartlett', 'mvdr', 'capon', 'music', 'esprit', 'root_music')]
+        elif path == ('environment', 'rate_source'):
+            choices = [('Explicit rates', 'explicit'), ('Thermal budget', 'thermal_budget')]
         elif path == ('measurement', 'mode'):
             choices = [('Angle of arrival', 'aoa'), ('IF-only', 'if_only')]
         if choices is not None:
@@ -203,7 +205,10 @@ class ProfileEditor(QWidget):
             control.setWordWrap(True)
         else:
             control = QLineEdit(str(value) if value is not None else 'null')
-            if key in ('mode', 'schema_version') or value is None:
+            if path == ('noise', 'readout', 'model'):
+                control.setReadOnly(True)
+                control.setToolTip('Use Add / replace option or Advanced structure to change the model and its required parameters together.')
+            elif key in ('mode', 'schema_version') or value is None:
                 control.setReadOnly(True)
                 control.setToolTip('Choose a different New Profile template or import a profile to change its structure.')
             else:

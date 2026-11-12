@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 import qutip as qt
 
+from tests.noise_profile_fixtures import legacy_noise_profile
+
 from rydberg_aoa.config.noise import parse_noise_config
 from rydberg_aoa.exceptions import PhysicsCalculationError, PhysicsConfigurationError
 from rydberg_aoa.simulation.rf_drive_noise import build_rf_realization, RFDriveRealization
@@ -25,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def declaration():
-    return json.loads((ROOT/'examples/noise005/prescribed_rf.json').read_text())['noise']
+    return legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf.json'))['noise']
 
 
 def noise(**changes):
@@ -66,7 +68,7 @@ def test_invalid_execution_precedes_arc(isolation, monkeypatch, field, bad):
 
 
 def test_nested_readout_requires_one_trial_and_seed_identity():
-    data = json.loads((ROOT/'examples/noise005/prescribed_rf_pin.json').read_text())['noise']
+    data = legacy_noise_profile((ROOT/'examples/noise005/prescribed_rf_pin.json'))['noise']
     assert parse_noise_config(data).physical_readout_enabled
     for field in ('seed', 'trials'):
         bad = copy.deepcopy(data)
@@ -199,7 +201,7 @@ def test_drive_and_readout_use_same_trial_without_nested_campaign(isolation, mon
     data = declaration()
     file = ROOT/('examples/noise003/prescribed_campaign.json' if readout == 'gaussian'
                  else 'examples/noise004/prescribed_pin.json')
-    nested = json.loads(file.read_text())['noise']
+    nested = legacy_noise_profile(file)['noise']
     nested['trials'] = data['trials']
     data['readout'] = nested
     cfg = parse_noise_config(data)
@@ -277,39 +279,39 @@ def test_real_rf_cli_and_saved_trajectories(tmp_path, mode):
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'
     path.write_text(json.dumps(data))
-    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path)]
+    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path / 'run')]
     if mode == 'experimental':
         args.append('--no-plots')
     proc = subprocess.run(args, cwd=ROOT, env=dict(os.environ, MPLBACKEND='Agg'), capture_output=True,
                           text=True, errors='replace', timeout=240)
     assert proc.returncode == 0, proc.stdout+proc.stderr
-    report = json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['rf_drive_included'] and report['noise_included']
     assert report['applied_fields'] == data['fields']
     assert not report['spectrum_drive_noise_included']
-    with np.load(tmp_path/'simulation_arrays.npz', allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz', allow_pickle=False) as a:
         assert not np.array_equal(a['nominal_time_traces'], a['time_traces'])
         expected = build_rf_realization(parse_noise_config(data['noise']), trial=0)
         assert np.array_equal(a['trial_rf_lo_amplitude'][0], expected.lo_amplitude)
         assert np.array_equal(a['drive_noise_times_us'], expected.times_us)
     if mode == 'prescribed':
-        assert (tmp_path/'fig_rf_drive_noise.png').is_file()
+        assert (tmp_path/'run' / 'fig_rf_drive_noise.png').is_file()
 
 
 def test_real_rf_pin_cli_keeps_detector_and_drive_provenance(tmp_path):
     data = json.loads((ROOT/'examples/noise005/prescribed_rf_pin.json').read_text())
-    data['noise']['trials'] = data['noise']['readout']['trials'] = 1
+    data['noise']['trials'] = 1
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'
     path.write_text(json.dumps(data))
     proc = subprocess.run([sys.executable, '-B', 'main.py', '--profile', str(path), '--no-plots',
-        '--output-dir', str(tmp_path)], cwd=ROOT, capture_output=True, text=True, errors='replace', timeout=240)
+        '--output-dir', str(tmp_path / 'run')], cwd=ROOT, capture_output=True, text=True, errors='replace', timeout=240)
     assert proc.returncode == 0, proc.stdout+proc.stderr
-    report = json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['rf_drive_included'] and report['readout_noise']['noise_applied']
     assert report['sensing_trace_units'] == 'V'
     assert report['rf_drive_campaign']['atomic_evolutions_per_path'] == 2
-    with np.load(tmp_path/'simulation_arrays.npz', allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz', allow_pickle=False) as a:
         assert np.array_equal(a['trial_time_traces'][0], a['time_traces'])
         assert np.array_equal(a['time_traces'], a['clean_time_traces']+a['additive_readout_noise'])
         assert a['trial_rf_lo_amplitude'].shape[0] == a['trial_measured_current_a'].shape[0] == 1

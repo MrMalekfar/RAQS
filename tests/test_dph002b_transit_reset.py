@@ -96,7 +96,7 @@ def test_reset_coherence_relaxation():
 # ---------------------------------------------------------------------------
 # TEST 5 — independent rate oracle (effective Markovian transit rate)
 # ---------------------------------------------------------------------------
-def test_transit_rate_independent_oracle():
+def test_transit_rate_independent_oracle(configured_atom):
     # DPH-002C: use the PRODUCTION temperature owner (parameters), not the
     # duplicated constants value.
     T = params.VAPOR_CELL_TEMPERATURE_K

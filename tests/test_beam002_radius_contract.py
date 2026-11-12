@@ -141,7 +141,7 @@ def test_rf_rabi_unchanged_by_beam_correction(bundle, atomic_physics):
 # ---------------------------------------------------------------------------
 # 4. Transit rate — corrected radius, independent oracle
 # ---------------------------------------------------------------------------
-def test_transit_rate_matches_independent_oracle():
+def test_transit_rate_matches_independent_oracle(configured_atom):
     """Gamma_t == sqrt(2/pi)*sqrt(kB*T/m)/w0_probe with the corrected radius."""
     from rydberg_aoa.config import constants as const
     from rydberg_aoa.config import parameters as params
@@ -156,7 +156,7 @@ def test_transit_rate_matches_independent_oracle():
     assert got == pytest.approx(1.7129, rel=0, abs=5e-3)
 
 
-def test_transit_proportional_to_1_over_w0():
+def test_transit_proportional_to_1_over_w0(configured_atom):
     """Doubling the radius halves the rate (DPH-002B \u221d 1/w0 structure)."""
     from rydberg_aoa.physics.lindblad import calculate_transit_rate_per_us
     w0 = LASER_PARAMS["probe"]["beam_waist_mm"]

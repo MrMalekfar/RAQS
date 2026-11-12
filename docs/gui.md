@@ -34,6 +34,8 @@ Add / replace option lists sections and explicit starting values from the curren
 
 Numeric matrices support Duplicate row and Remove row. Vectors support Duplicate value and Remove value without silently losing entries. Advanced structure provides native tree editing of every JSON value, array entry and object member, including optional/null/composite structures that do not yet have a dedicated form. No source JSON typing is required. The parser continues to decide valid types, names and combinations.
 
+Profile schema 2 can declare no spectrum or environment. A prescribed diagnostics profile can declare no temporal execution. The profile version is shown as contract information. For noise schema 4, each configured source has an Enabled / Disabled control. The readout model and its required parameters can be replaced together through an explicit preset or Advanced Structure. The core parser validates the combination before a run.
+
 If atom is absent, the form shows the effective legacy species/fraction without silently adding an atom block. Intentionally changing it makes the declaration explicit. Changing species never retunes fields or rewrites the prepared channel.
 
 Save As creates a new file and refuses an existing destination. An untouched import retains its original bytes. After editing, serialization may change whitespace but preserves unedited data. Reload, replacement and closing protect unsaved edits with a discard/cancel prompt. The live JSON is an inspector, not a separate competing editor.

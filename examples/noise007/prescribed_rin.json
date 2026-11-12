@@ -123,33 +123,35 @@
     "analytical_enabled": true
   },
   "noise": {
-    "schema_version": 3,
     "enabled": true,
     "seed": 20261012,
     "trials": 3,
+    "schema_version": 4,
     "drive": {
-      "noise_step_us": 0.2,
-      "horizon_us": 120.0,
-      "interpolation": "linear",
-      "spatial_scope": "common_all_paths",
-      "preparation": "nominal_lo_steady_state_then_switch",
-      "process_initialization": "stationary",
-      "phase_budget": "independent_residual"
-    },
-    "sources": {
-      "laser_probe_intensity": {
-        "enabled": true,
-        "fractional_rms": 0.02,
-        "correlation_time_us": 5.0,
-        "units": "relative_rms",
-        "budget": "technical_excess"
+      "settings": {
+        "noise_step_us": 0.2,
+        "horizon_us": 120.0,
+        "interpolation": "linear",
+        "spatial_scope": "common_all_paths",
+        "preparation": "nominal_lo_steady_state_then_switch",
+        "process_initialization": "stationary",
+        "phase_budget": "independent_residual"
       },
-      "laser_coupling_intensity": {
-        "enabled": true,
-        "fractional_rms": 0.02,
-        "correlation_time_us": 10.0,
-        "units": "relative_rms",
-        "budget": "technical_excess"
+      "sources": {
+        "laser_probe_intensity": {
+          "enabled": true,
+          "fractional_rms": 0.02,
+          "correlation_time_us": 5.0,
+          "units": "relative_rms",
+          "budget": "technical_excess"
+        },
+        "laser_coupling_intensity": {
+          "enabled": true,
+          "fractional_rms": 0.02,
+          "correlation_time_us": 10.0,
+          "units": "relative_rms",
+          "budget": "technical_excess"
+        }
       }
     },
     "readout": null

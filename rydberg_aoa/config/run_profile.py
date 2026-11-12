@@ -66,6 +66,7 @@ class RunProfile:
     radiative: object = None
     magnetic_core: object = None
     lo_phase_reference: object = None
+    schema_version: int = 1
 
     @property
     def signed_if_mhz(self):
@@ -128,6 +129,11 @@ def parse_run_profile(document):
     if 'measurement' in document:
         required.add('measurement')
     data = _object(document, required, 'profile')
+    if mode == 'experimental' and data['execution'] is None:
+        raise PhysicsConfigurationError('LAB-006: experimental profiles require an execution object.')
+    if version == 2 and data['spectrum'] is not None:
+        if data['environment'] is None or data['execution'] is None:
+            raise PhysicsConfigurationError('LAB-007: a spectrum requires explicit environment and execution.')
     numerics = None
     if 'numerics' in data:
         from .run_numerics import RunNumerics, parse_temporal_ode
@@ -146,10 +152,12 @@ def parse_run_profile(document):
         from .noise import parse_noise_config
         noise = parse_noise_config(data['noise'])
     environment = spectrum = None
-    if version == 2:
+    if version == 2 and data['environment'] is not None:
         env = _object(data['environment'], (f.name for f in fields(ProfileEnvironment)), 'environment')
         env['linewidth_rates_per_us'] = _tuple(env['linewidth_rates_per_us'], 'linewidth rates')
         environment = ProfileEnvironment(**env)
+        if environment.rate_source == 'thermal_budget' and data['execution'] is None:
+            raise PhysicsConfigurationError('LAB-007: thermal rate budgeting requires execution.')
         if data['spectrum'] is not None:
             raw = data['spectrum']
             if not isinstance(raw, dict) or (('probe_offsets_mhz' in raw) == ('probe_scan' in raw)):
@@ -229,7 +237,7 @@ def parse_run_profile(document):
             raise PhysicsConfigurationError('LAB-006: prescribed probe violates E1 hyperfine rules.')
         request = DeclaredLadder(tuple((role, tuple(level.items())) for role, level in ladder.items()))
         run_config, axis = None, preparation.quantization_axis
-    if mode == 'experimental' or version == 2:
+    if data.get('execution') is not None:
         thermal = environment is not None and environment.rate_source == 'thermal_budget'
         execution_keys = {'duration_us', 'sample_count', 'positions_m', 'target_azimuth_deg',
                       'transient_delay_us', 'sensor_probe_offset_mhz', 'processes',
@@ -275,7 +283,8 @@ def parse_run_profile(document):
         temporal_doppler = parse_temporal_doppler(data['temporal_doppler'])
         if temporal_doppler.enabled and (version != 2 or environment is None):
             raise PhysicsConfigurationError('DOP-TD-001: temporal ensemble requires explicit schema-2 environment.')
-    profile = RunProfile(mode, probe, coupling, lo, signal, request, run_config, axis, environment, spectrum, noise)
+    profile = RunProfile(mode, probe, coupling, lo, signal, request, run_config, axis, environment, spectrum, noise,
+                         schema_version=version)
     if numerics is not None:
         from dataclasses import replace
         profile = replace(profile,numerics=numerics)
@@ -332,9 +341,11 @@ def parse_run_profile(document):
     return profile
 
 
-def load_run_profile(path):
+def load_run_profile(path, *, raw=None):
     try:
-        document = json.loads(Path(path).read_text(encoding='utf-8-sig'), object_pairs_hook=_unique_object,
+        if raw is None:
+            raw = Path(path).read_bytes()
+        document = json.loads(raw.decode('utf-8-sig'), object_pairs_hook=_unique_object,
                               parse_constant=_reject_constant)
     except (OSError, ValueError) as exc:
         raise PhysicsConfigurationError(f'LAB-006: cannot read profile {path!s}.') from exc

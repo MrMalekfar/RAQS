@@ -67,10 +67,15 @@ def calculate_dephasing_rates(
     if temperature_k is None:
         temperature_k = const.VAPOR_CELL_TEMPERATURE_K
     if atom_mass_kg is None:
-        atom_mass_kg = acfg.ATOM.mass
+        atom_mass_kg = acfg.require_configured_atom().mass
     if n_density_m3 is None:
+        acfg.require_configured_atom()
         n_density_m3 = params.CALCULATED_N0
+        if n_density_m3 is None:
+            from ...exceptions import PhysicsConfigurationError
+            raise PhysicsConfigurationError('ATOM-001: number density has not been configured.')
     if rydberg_n is None:
+        acfg.require_atomic_physics_initialized()
         rydberg_n = acfg.ATOMIC_LEVELS['rydberg1']['n']
     if gamma_probe_linewidth is None:
         gamma_probe_linewidth = params.GAMMA_PROBE_LINEWIDTH

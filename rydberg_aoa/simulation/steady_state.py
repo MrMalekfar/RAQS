@@ -133,7 +133,7 @@ def _clean_breakpoints(breakpoints, n_sigma=5.0, cap=200, temperature_k=None, at
     from ..physics.doppler.adaptive_maxwell import get_velocity_std as _vs
 
     v_max = n_sigma * _vs(params.VAPOR_CELL_TEMPERATURE_K if temperature_k is None else temperature_k,
-                            acfg.ATOM.mass if atom_mass_kg is None else atom_mass_kg)
+                            acfg.require_configured_atom().mass if atom_mass_kg is None else atom_mass_kg)
     pts = []
     for bp in breakpoints:
         b = float(bp)
@@ -397,8 +397,6 @@ def simulate_spectrum(
     delta_p_center, delta_c, delta_rf = p_deltas
 
     # --- VELOCITY CLASSES (Doppler averaging setup, done once per spectrum) ---
-    atom_mass_kg = (acfg.ATOM.mass if doppler_settings is None
-                    else doppler_settings.atom_mass_kg)
     temperature = params.VAPOR_CELL_TEMPERATURE_K if doppler_settings is None else doppler_settings.temperature_k
     method = params.DOPPLER_METHOD if doppler_settings is None else doppler_settings.method
     n_classes = params.DOPPLER_N_CLASSES if doppler_settings is None else doppler_settings.n_classes
@@ -411,8 +409,9 @@ def simulate_spectrum(
             return calculate_transmission_from_rho21(coherence)
         return calculate_transmission_from_rho21(coherence, absorption_prefactors=transmission_prefactors)
 
-    mass_kg_val = float(atom_mass_kg)
     if doppler_on:
+        mass_kg_val = float(acfg.require_configured_atom().mass if doppler_settings is None
+                            else doppler_settings.atom_mass_kg)
         # Adaptive method does not use discrete classes; still resolve
         # wavelengths once for the response function.
         if method != "adaptive":
@@ -420,7 +419,7 @@ def simulate_spectrum(
             velocities_ms, class_weights = generate_velocity_classes(
                 n_classes=n_classes,
                 temperature_k=temperature,
-                atom_mass_kg=atom_mass_kg,
+                atom_mass_kg=mass_kg_val,
                 method=method,
                 n_sigma=n_sigma,
             )

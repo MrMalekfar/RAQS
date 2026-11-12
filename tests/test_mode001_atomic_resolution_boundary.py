@@ -369,7 +369,7 @@ def test_request_identity_carries_all_four_states():
 # ===========================================================================
 # 5. Zero search: PRESCRIBED never touches a level/mJ/q search
 # ===========================================================================
-def test_prescribed_resolution_never_runs_a_level_search(monkeypatch):
+def test_prescribed_resolution_never_runs_a_level_search(monkeypatch, configured_atom):
     """The EXPERIMENTAL optimizer path must be unreachable in PRESCRIBED.
 
     Belt and braces: the branch entry point itself is replaced, plus the two
@@ -404,7 +404,7 @@ def test_prescribed_resolution_never_runs_a_level_search(monkeypatch):
 
 
 def test_prescribed_dipoles_come_from_the_declared_channel_primitives(
-        monkeypatch):
+        monkeypatch, configured_atom):
     """Positive control: the three QN primitives ARE the dipole source."""
     import rydberg_aoa.arc.dipole as dipole_mod
 
@@ -427,7 +427,7 @@ def test_prescribed_dipoles_come_from_the_declared_channel_primitives(
     assert all(count >= 1 for count in calls.values()), calls
 
 
-def test_prescribed_resolution_never_rewrites_the_applied_fields():
+def test_prescribed_resolution_never_rewrites_the_applied_fields(configured_atom):
     """Section 13: wavelengths/frequencies are INPUTS, never repaired."""
     before = copy.deepcopy(
         (LASER_PARAMS, RF_PARAMS, SIGNAL_RF_PARAMS))
@@ -444,7 +444,7 @@ def test_prescribed_resolution_never_rewrites_the_applied_fields():
             RF_PARAMS["electric_field_vm"]) == rf_before
 
 
-def test_prescribed_detuning_is_not_forced_to_resonance():
+def test_prescribed_detuning_is_not_forced_to_resonance(configured_atom):
     """Section 13 corollary: the configured coupling wavelength (483.4 nm) is
     NOT the 5P -> 26D transition wavelength, so a prescribed Delta_c must stay
     large.  A near-zero value would prove a force-resonance mutation."""
@@ -457,7 +457,7 @@ def test_prescribed_detuning_is_not_forced_to_resonance():
         "appears to have been rewritten (forbidden by MODE-001 section 13)")
 
 
-def test_prescribed_detuning_cache_is_complete():
+def test_prescribed_detuning_cache_is_complete(configured_atom):
     acfg._initialize_prescribed_levels(prescribed_request())
     key = acfg._resolution_cache_key(prescribed_request())
     entry = acfg._DETUNING_CACHE[key]
@@ -493,7 +493,7 @@ def _arc_probe_detuning_rad_us():
     return 2.0 * np.pi * (f_applied_hz - f_atomic_hz) * 1e-6
 
 
-def test_probe_detuning_sign_and_magnitude_match_an_arc_oracle():
+def test_probe_detuning_sign_and_magnitude_match_an_arc_oracle(configured_atom):
     """Delta_p must be omega_applied - omega_atomic, in rad/us."""
     acfg._initialize_prescribed_levels(prescribed_request())
     key = acfg._resolution_cache_key(prescribed_request())
@@ -509,7 +509,7 @@ def test_probe_detuning_sign_and_magnitude_match_an_arc_oracle():
         f"oracle {expected!r} rad/us (= omega_applied - omega_atomic)")
 
 
-def test_detuning_units_are_rad_per_microsecond():
+def test_detuning_units_are_rad_per_microsecond(configured_atom):
     """A Hz/rad-s confusion would show up as a 1e6 or 2*pi scale error."""
     acfg._initialize_prescribed_levels(prescribed_request())
     key = acfg._resolution_cache_key(prescribed_request())

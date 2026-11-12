@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "mode": "prescribed",
+  "fields": {
+    "probe": {
+      "wavelength_nm": 780.241476,
+      "power_mw": 0.0001,
+      "beam_waist_mm": 0.07983624922707379,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "coupling": {
+      "wavelength_nm": 483.4,
+      "power_mw": 32.0,
+      "beam_waist_mm": 0.12230233924147474,
+      "detuning_mhz": 0.0,
+      "polarization": 0
+    },
+    "lo": {
+      "frequency_hz": 132649000000.0,
+      "electric_field_vm": 1.5,
+      "polarization": 0
+    },
+    "signal": {
+      "frequency_hz": 132649100000.0,
+      "electric_field_vm": 0.005,
+      "polarization": 0
+    }
+  },
+  "optical_energy_convention": "fs_centroid",
+  "quantization_axis": [
+    0.0,
+    0.0,
+    1.0
+  ],
+  "ladder": {
+    "ground": {
+      "n": 5,
+      "l": 0,
+      "j": 0.5,
+      "f": 3,
+      "mf": 0
+    },
+    "excited": {
+      "n": 5,
+      "l": 1,
+      "j": 1.5,
+      "f": 4,
+      "mf": 0
+    },
+    "rydberg1": {
+      "n": 26,
+      "l": 2,
+      "j": 2.5,
+      "mj": -0.5
+    },
+    "rydberg2": {
+      "n": 27,
+      "l": 1,
+      "j": 1.5,
+      "mj": -0.5
+    }
+  }
+}

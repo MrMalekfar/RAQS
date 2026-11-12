@@ -93,35 +93,39 @@
   },
   "spectrum": null,
   "noise": {
-    "schema_version": 2,
     "enabled": true,
     "seed": 20261012,
     "trials": 8,
-    "detector": {
-      "enabled": true,
-      "collection_efficiency": 0.5,
-      "responsivity_a_per_w": 0.5,
-      "dark_current_a": 1e-10,
-      "integration_time_us": 0.1,
-      "transimpedance_v_per_a": 20000.0,
-      "output_units": "V",
-      "aperture_model": "boxcar_sample_hold"
-    },
-    "sources": {
-      "photon_shot": {
-        "enabled": true
+    "schema_version": 4,
+    "drive": null,
+    "readout": {
+      "model": "pin",
+      "sources": {
+        "photon_shot": {
+          "enabled": true
+        },
+        "dark_shot": {
+          "enabled": true
+        },
+        "electronic_current": {
+          "enabled": true,
+          "asd_a_per_sqrt_hz": 1e-14
+        },
+        "johnson_current": {
+          "enabled": true,
+          "temperature_k": 300.0,
+          "shunt_resistance_ohm": 1000000000.0
+        }
       },
-      "dark_shot": {
-        "enabled": true
-      },
-      "electronic_current": {
+      "detector": {
         "enabled": true,
-        "asd_a_per_sqrt_hz": 1e-14
-      },
-      "johnson_current": {
-        "enabled": true,
-        "temperature_k": 300.0,
-        "shunt_resistance_ohm": 1000000000.0
+        "collection_efficiency": 0.5,
+        "responsivity_a_per_w": 0.5,
+        "dark_current_a": 1e-10,
+        "integration_time_us": 0.1,
+        "transimpedance_v_per_a": 20000.0,
+        "output_units": "V",
+        "aperture_model": "boxcar_sample_hold"
       }
     }
   },

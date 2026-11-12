@@ -88,7 +88,7 @@ def test_default_dephasing_budget_unchanged(atomic_physics):
     assert calculate_dephasing_rates() == pytest.approx(GOLDEN_DEPH, rel=1e-12)
 
 
-def test_default_transit_resolution_unchanged():
+def test_default_transit_resolution_unchanged(configured_atom):
     """Config-gated resolver with defaults returns the legacy rate."""
     assert resolve_effective_transit_rate() == pytest.approx(
         GOLDEN_TRANSIT, rel=1e-12)

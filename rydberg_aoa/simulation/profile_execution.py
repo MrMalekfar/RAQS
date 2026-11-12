@@ -62,7 +62,7 @@ def execute_profile(profile, *, diagnostics_only=False, drive_realizations=None,
         pin_efficiency(profile.noise.detector.responsivity_a_per_w, profile.probe.wavelength_nm*1e-9)
     if profile.run_config is None and not diagnostics_only:
         raise PhysicsConfigurationError('LAB-006: prescribed profile supports --diagnostics-only; '
-                                        'use schema_version 2 with explicit execution for sensing.')
+                                        'declare an explicit execution object in schema_version 2 for sensing.')
     if not diagnostics_only and any(value == 0 for value in
             (profile.probe.power_mw, profile.coupling.power_mw,
              profile.lo.electric_field_vm, profile.signal.electric_field_vm)):
@@ -138,6 +138,7 @@ def execute_profile(profile, *, diagnostics_only=False, drive_realizations=None,
         report = {
             'atom': atom_report(ac.ATOM, ac.ATOM_SPEC, profile.atom is not None),
             'schema_version': 2 if profile.environment is not None else 1, 'mode': profile.mode, 'diagnostics_only': diagnostics_only,
+            'input_schema_version': profile.schema_version,
             'prepared_single_channel_assumption': True,
             'input_provenance': input_provenance,
             'lo_phase_reference':lo_phase_receipt(profile,diagnostics_only),
@@ -421,8 +422,8 @@ def save_profile_results(directory, result):
         arrays.update(angles=result['angles'], power=result['power'])
     spectrum = result.get('spectrum')
     if spectrum is not None:
-        arrays.update({'spectrum_' + key: value for key, value in spectrum.items()
-                       if value is not None and key not in ('analytical_contract', 'radiative_model', 'decay_rates_per_us')})
+        from .profile_spectrum import spectrum_arrays
+        arrays.update(spectrum_arrays(spectrum))
     np.savez_compressed(directory / 'simulation_arrays.npz', **arrays)
 
 

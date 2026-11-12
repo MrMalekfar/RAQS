@@ -70,7 +70,7 @@ def calculate_transit_rate_per_us(
     if beam_waist_mm is None:
         beam_waist_mm = LASER_PARAMS['probe']['beam_waist_mm']
     if atom_mass_kg is None:
-        atom_mass_kg = acfg.ATOM.mass
+        atom_mass_kg = acfg.require_configured_atom().mass
 
     w0 = beam_waist_mm * 1e-3                       # 1/e² radius [m]
     v_perp_mean = np.sqrt(np.pi * const.k_B * temperature_k / (2.0 * atom_mass_kg))

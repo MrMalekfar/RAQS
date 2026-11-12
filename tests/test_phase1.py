@@ -31,14 +31,14 @@ def _optimize_at_10ghz():
     return optimizer.optimize(probe, coupling, rf)
 
 
-def test_single_stage_optimizer_initializes():
+def test_single_stage_optimizer_initializes(configured_atom):
     """SingleStageLevelOptimizer must construct against the shared ARC atom."""
     optimizer = SingleStageLevelOptimizer(arc_atom=acfg.ATOM)
     assert optimizer is not None
 
 
 @pytest.mark.slow
-def test_rf_first_finds_transitions_and_levels():
+def test_rf_first_finds_transitions_and_levels(configured_atom):
     """RF-first scan at 10 GHz must find transitions and select a ladder."""
     result = _optimize_at_10ghz()
     assert result, "optimizer returned no result"
