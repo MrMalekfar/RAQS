@@ -256,18 +256,18 @@ def test_real_detector_profile_and_si_saved_arrays(tmp_path, mode):
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'
     path.write_text(json.dumps(data))
-    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path)]
+    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path / 'run')]
     if mode == 'experimental':
         args.append('--no-plots')
     proc = subprocess.run(args, cwd=ROOT, env=dict(os.environ, MPLBACKEND='Agg'),
         capture_output=True, text=True, errors='replace', timeout=180)
     assert proc.returncode == 0, proc.stdout+proc.stderr
-    report = json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['sensing_trace_units'] == 'V'
     assert report['readout_noise']['boxcar_enbw_hz'] == 5e6
     assert report['applied_fields'] == data['fields']
     assert report['noise_campaign']['trials_completed'] == 2
-    with np.load(tmp_path/'simulation_arrays.npz', allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz', allow_pickle=False) as a:
         assert a['trial_measured_current_a'].shape[0] == 2
         assert np.array_equal(a['time_traces'], a['clean_detector_time_traces']+a['additive_readout_noise'])
         assert a['noiseless_current_a'] == pytest.approx(.5*a['clean_optical_power_w']+1e-10)

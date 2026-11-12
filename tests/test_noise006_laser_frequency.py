@@ -259,18 +259,18 @@ def test_real_cli_saved_laser_realization_and_fields(tmp_path, mode):
     data['noise']['trials'] = 1
     data['spectrum']['probe_offsets_mhz'] = [-.5, .5]
     path = tmp_path/'profile.json'; path.write_text(json.dumps(data))
-    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path)]
+    args = [sys.executable, '-B', 'main.py', '--profile', str(path), '--output-dir', str(tmp_path / 'run')]
     if mode != 'prescribed':
         args.append('--no-plots')
     proc = subprocess.run(args, cwd=ROOT, env=dict(os.environ, MPLBACKEND='Agg'),
         capture_output=True, text=True, errors='replace', timeout=240)
     assert proc.returncode == 0, proc.stdout+proc.stderr
-    report = json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['laser_frequency_noise_included'] and report['noise_included']
     assert not report['rf_drive_included'] and not report['spectrum_drive_noise_included']
     assert report['applied_fields'] == data['fields']
     expected = build_rf_realization(parse_noise_config(data['noise']), trial=0)
-    with np.load(tmp_path/'simulation_arrays.npz', allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz', allow_pickle=False) as a:
         assert np.array_equal(a['trial_laser_probe_frequency_hz'][0], expected.probe_frequency_hz)
         assert np.array_equal(a['trial_laser_integrated_phase_rad'][0],
                               [expected.laser_phase_at(t) for t in expected.times_us])
@@ -281,4 +281,4 @@ def test_real_cli_saved_laser_realization_and_fields(tmp_path, mode):
             assert np.array_equal(a['time_traces'], a['clean_time_traces']+a['additive_readout_noise'])
             assert a['trial_measured_current_a'].shape[0] == 1
     if mode == 'prescribed':
-        assert (tmp_path/'fig_laser_frequency_noise.png').is_file()
+        assert (tmp_path/'run' / 'fig_laser_frequency_noise.png').is_file()

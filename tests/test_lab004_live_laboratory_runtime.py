@@ -17,7 +17,7 @@ from tests.test_lab002_laboratory_request import reference_request
 
 
 @pytest.fixture
-def live_request():
+def live_request(configured_atom):
     published = snapshot_published_atomic_state()
     pipeline = ac._snapshot_pipeline_transaction()
     template = reference_request()

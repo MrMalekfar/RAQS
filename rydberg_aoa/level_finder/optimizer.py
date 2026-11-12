@@ -30,11 +30,8 @@ class SingleStageLevelOptimizer:
         """
         # Load global ARC atom if none provided
         if arc_atom is None:
-            try:
-                from ..config.atomic_config import ATOM
-                arc_atom = ATOM
-            except ImportError as exc:
-                raise PhysicsConfigurationError("LAB-001: configured ARC atom cannot be loaded. F05.") from exc
+            from ..config.atomic_config import require_configured_atom
+            arc_atom = require_configured_atom()
 
         self.arc_optimizer = ARCOptimizer(arc_atom)
 

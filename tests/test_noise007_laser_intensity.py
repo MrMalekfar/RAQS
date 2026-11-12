@@ -276,16 +276,16 @@ def test_actual_rin_cli_and_saved_shared_power(tmp_path,mode):
     data['noise']['trials']=1
     data['spectrum']['probe_offsets_mhz']=[-.5,.5]
     path=tmp_path/'profile.json'; path.write_text(json.dumps(data))
-    args=[sys.executable,'-B','main.py','--profile',str(path),'--output-dir',str(tmp_path)]
+    args=[sys.executable,'-B','main.py','--profile',str(path),'--output-dir',str(tmp_path / 'run')]
     if mode!='prescribed': args.append('--no-plots')
     p=subprocess.run(args,cwd=ROOT,env=dict(os.environ,MPLBACKEND='Agg'),capture_output=True,text=True,errors='replace',timeout=240)
     assert p.returncode==0,p.stdout+p.stderr
-    report=json.loads((tmp_path/'run_report.json').read_text(encoding='utf-8'))
+    report=json.loads((tmp_path/'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['laser_intensity_noise_included'] and report['noise_included']
     assert not report['laser_frequency_noise_included'] and not report['rf_drive_included']
     assert report['applied_fields']==data['fields']
     expected=build_rf_realization(parse_noise_config(data['noise']),trial=0)
-    with np.load(tmp_path/'simulation_arrays.npz',allow_pickle=False) as a:
+    with np.load(tmp_path/'run' / 'simulation_arrays.npz',allow_pickle=False) as a:
         assert np.array_equal(a['trial_laser_probe_intensity'][0],expected.probe_intensity)
         assert np.array_equal(a['trial_laser_probe_rabi_multiplier'][0],np.sqrt(expected.probe_intensity))
         assert not np.array_equal(a['time_traces'],a['nominal_time_traces'])
@@ -293,4 +293,4 @@ def test_actual_rin_cli_and_saved_shared_power(tmp_path,mode):
             factors=np.array([expected.laser_intensity_at(t)[0] for t in a['tlist']])
             assert np.array_equal(a['trial_incident_probe_power_w'][0],data['fields']['probe']['power_mw']/1000*factors)
             assert np.array_equal(a['time_traces'],a['clean_time_traces']+a['additive_readout_noise'])
-    if mode=='prescribed': assert (tmp_path/'fig_laser_intensity_noise.png').is_file()
+    if mode=='prescribed': assert (tmp_path/'run' / 'fig_laser_intensity_noise.png').is_file()

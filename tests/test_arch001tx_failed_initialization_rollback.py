@@ -195,7 +195,7 @@ def _assert_nothing_published():
 # 1. REAL seam: the documented QN-001A boundary, full rollback, reproducer
 # ===========================================================================
 def test_failed_experimental_seam_rolls_back_and_prescribed_detuning_survives(
-        configuration_state, monkeypatch):
+        configured_atom, configuration_state, monkeypatch):
     """The original defect (ARCH-001TX reproducer), on the REAL pipeline.
 
     The production Experimental pipeline runs until the documented QN-001A

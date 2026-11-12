@@ -161,14 +161,19 @@ def test_existing_caller_contracts_unchanged():
         assert "rf_orientation" in names
         assert spec.parameters["rf_orientation"].default is None
         # (7) Original ordering plus explicitly declared trailing extensions:
-        #     worker:            [..., transit_rate_per_us, rf_orientation]
+        #     worker:            [..., transit_rate_per_us, rf_orientation,
+        #                         rf_drive, _coherence_only, temporal_ode]
         #     transmission:      [..., transit_rate_per_us,
         #                         steady_state_backend, rf_orientation]
         #     simulate_spectrum: [..., steady_state_backend, doppler_enabled,
         #                         transit_enabled, laser_linewidth_dephasing_enabled,
         #                         collision_dephasing_enabled, rf_orientation]
         if func is td.run_single_heterodyne_worker:
-            assert names[-2:] == ["transit_rate_per_us", "rf_orientation"]
+            tail = ["transit_rate_per_us", "rf_orientation", "rf_drive",
+                    "_coherence_only", "temporal_ode"]
+            assert names[names.index("noise_model") + 1:] == tail
+            assert [spec.parameters[name].default for name in tail] == [
+                None, None, None, False, None]
         elif func is ss._solve_probe_transmission:
             assert names[-3:] == [
                 "transit_rate_per_us",

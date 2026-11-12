@@ -16,6 +16,8 @@ import qutip as qt  # qt.basis for Fock states, qt.Qobj for operators
 
 from ..lindblad.create_transit_reset_collapse_ops import create_transit_reset_collapse_ops
 from ...arc.prepared_decay import PreparedRadiativeGraph
+from ...config.laboratory import _real
+from ...exceptions import PhysicsConfigurationError
 
 
 def create_sensor_model(
@@ -26,7 +28,7 @@ def create_sensor_model(
     delta_c: float,        # Δ_c = ω_coupling - ω_32 — Coupling detuning [rad/μs]
     delta_rf: float,       # Δ_rf = ω_rf - ω_43 — RF detuning [rad/μs]
     gammas: list[float] | PreparedRadiativeGraph,
-    dephasing_rates_list: list[float],  # [γ_deph2, γ_deph3, γ_deph4] — Dephasing rates [rad/μs]
+    dephasing_rates_list: list[float],  # [γ_deph2, γ_deph3, γ_deph4] — Dephasing rates [1/μs]
     transit_rate_per_us: float = 0.0,   # Effective Markovian transit rate Γ_t [1/μs]
     rf_orientation=None,   # RF-DIR-001B/001C: RFTransitionOrientation | None — energy direction of the |3>↔|4> RF edge: spontaneous-emission jump (001B) + sign of Delta_rf in the state-4 rotating-frame diagonal (001C); None → historical build (bit-identical)
 ) -> tuple:
@@ -35,7 +37,7 @@ def create_sensor_model(
 
     Constructs H = H_detuning + H_int in the rotating frame (ℏ = 1) following
     Bussey et al. (2024). Collapse operators include spontaneous emission jumps
-    and pure dephasing (transit, collision, Doppler broadening).
+    and pure dephasing (linewidth and collisions), with transit as a separate reset.
 
     Parameters
     ----------
@@ -61,7 +63,7 @@ def create_sensor_model(
         outside-space loss/return is not modelled. Its RF orientation is used
         and any conflicting explicit orientation is rejected.
     dephasing_rates_list : list[float]
-        [γ_deph2, γ_deph3, γ_deph4] — Pure dephasing rates on levels |2⟩, |3⟩, |4⟩ [rad/μs].
+        [γ_deph2, γ_deph3, γ_deph4] — Pure dephasing rates on levels |2⟩, |3⟩, |4⟩ [1/μs].
         (DPH-002B: linewidth + collision ONLY; transit must NOT be included here.)
     transit_rate_per_us : float, optional
         Effective Markovian transit (loss/repopulation) rate Γ_t [1/μs].
@@ -85,8 +87,19 @@ def create_sensor_model(
         c_ops : list[qt.Qobj] — Collapse operators for Lindblad master equation.
         obs_probe_coherence : qt.Qobj — σ_{21} = |2⟩⟨1|, the probe coherence operator.
     """
+    def rates(values, name):
+        if not isinstance(values, (tuple, list, np.ndarray)) \
+                or (isinstance(values, np.ndarray) and values.ndim != 1) or len(values) != 3:
+            raise PhysicsConfigurationError(f'{name} requires exactly three rates [1/us].')
+        return tuple(_real(rate, name, nonnegative=True) for rate in values)
+
     if isinstance(gammas, PreparedRadiativeGraph):
         rf_orientation = gammas.require_orientation(rf_orientation)
+    else:
+        gammas = rates(gammas, 'decay')
+    dephasing_rates_list = rates(dephasing_rates_list, 'pure dephasing')
+    if transit_rate_per_us is not None:
+        transit_rate_per_us = _real(transit_rate_per_us, 'transit rate [1/us]', nonnegative=True)
 
     # --- BASIS STATES ---
     # {|1⟩, |2⟩, |3⟩, |4⟩} — Fock basis for the 4-level cascade system
@@ -177,7 +190,7 @@ def create_sensor_model(
             c_ops.append(np.sqrt(gammas[2]) * rf_jump)
 
     # 2. Pure Dephasing Operators — C_deph = √γ_deph |i⟩⟨i|
-    # Dephasing on level |2⟩ (probe transition broadening from transit, collisions, Doppler)
+    # Dephasing on level |2⟩ (linewidth and collisions)
     if dephasing_rates_list[0] > 0:
         c_ops.append(np.sqrt(dephasing_rates_list[0]) * s2.proj())  # C_deph2 = √γ_deph2 · |2⟩⟨2|
     # Dephasing on level |3⟩ (intermediate state broadening)

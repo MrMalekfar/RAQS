@@ -27,13 +27,7 @@ from ..exceptions import (
     PhysicsConfigurationError,
     PhysicsError,
 )
-# Initialize ARC atom first 
-try:
-    ATOM = get_arc_atom(LEGACY_ATOM)
-    print("ARC: Atomic database loaded successfully")
-except (ImportError, Exception) as e:
-    ATOM = None
-    print(f"ARC: Atomic database not available ({e})")
+ATOM = None
 
 
 _ATOMIC_LEVELS_CACHE = {}
@@ -48,6 +42,12 @@ def _atom_identity():
     return (ATOM_SPEC, type(ATOM).__module__, type(ATOM).__qualname__, id(ATOM),
             getattr(ATOM, 'mass', None), getattr(ATOM, 'I', None), getattr(ATOM, 'groundStateN', None),
             getattr(ATOM, 'preferQuantumDefects', None), getattr(ATOM, 'cpp_numerov', None))
+
+
+def require_configured_atom():
+    if ATOM is None:
+        raise PhysicsConfigurationError('ATOM-001: call configure_atom() or initialize_atomic_physics() first.')
+    return ATOM
 
 
 def configure_atom(spec):
@@ -982,6 +982,8 @@ def _initialize_laboratory_physics(request, *, force=False):
                                      build_laboratory_runtime, populate_laboratory_caches)
     module = sys.modules[__name__]
     require_matching_applied_fields(module, request)
+    if ATOM is None:
+        configure_atom(ATOM_SPEC)
     identity = laboratory_identity(ATOM, request)
     if _ATOMIC_PHYSICS_INITIALIZED and not force:
         if identity != _INITIALIZED_RESOLUTION_IDENTITY:
@@ -1131,10 +1133,6 @@ def initialize_atomic_physics(*, force: bool = False,
     if isinstance(resolution_request, ExperimentalLabRequest):
         return _initialize_laboratory_physics(resolution_request, force=force)
     request = resolve_resolution_request(resolution_request)
-    request_identity = resolution_request_identity(request)
-    if (ATOM_SPEC != LEGACY_ATOM or type(ATOM).__name__ in ('Rubidium87', 'Caesium')
-            or (type(ATOM).__name__ == 'Rubidium85' and ATOM is not get_arc_atom(LEGACY_ATOM))):
-        request_identity = ('ATOM-001', _atom_identity(), request_identity)
 
     if not request.is_prescribed:
         # LAB-002: selection, geometry and heterodyne must describe the same
@@ -1142,6 +1140,13 @@ def initialize_atomic_physics(*, force: bool = False,
         # never select one stale copy as an implicit authority.
         from .rf_configuration import read_configured_rf_fields
         read_configured_rf_fields()
+
+    if ATOM is None:
+        configure_atom(ATOM_SPEC)
+    request_identity = resolution_request_identity(request)
+    if (ATOM_SPEC != LEGACY_ATOM or type(ATOM).__name__ in ('Rubidium87', 'Caesium')
+            or (type(ATOM).__name__ == 'Rubidium85' and ATOM is not get_arc_atom(LEGACY_ATOM))):
+        request_identity = ('ATOM-001', _atom_identity(), request_identity)
 
     if _ATOMIC_PHYSICS_INITIALIZED and not force:
         if request_identity != _INITIALIZED_RESOLUTION_IDENTITY:

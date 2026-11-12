@@ -73,6 +73,7 @@ def production_run():
     the domain production used, with no duplicated hard-coded bounds — and
     the original method then executes untouched.
     """
+    atom = acfg.get_arc_atom(acfg.LEGACY_ATOM)
     captured = {}
     original = ARCOptimizer.optimize_levels
 
@@ -85,7 +86,7 @@ def production_run():
     patch.setattr(ARCOptimizer, "optimize_levels", _spy)
     try:
         before = _config_snapshot()
-        result = SingleStageLevelOptimizer(arc_atom=acfg.ATOM).optimize(
+        result = SingleStageLevelOptimizer(arc_atom=atom).optimize(
             LaserParams(**lrf.LASER_PARAMS["probe"]),
             LaserParams(**lrf.LASER_PARAMS["coupling"]),
             RFParams(**lrf.RF_PARAMS),
@@ -99,6 +100,7 @@ def production_run():
     assert result and "levels" in result, (
         "the configured RF carrier must yield a selected manifold")
     return {
+        "atom": atom,
         "result": result,
         "rf_n_range": captured["rf_n_range"],
         "before": before,
@@ -159,12 +161,12 @@ def _independent_fs_oracle(atom, n_range, excited, carrier_hz, tolerance_hz,
 def oracle(production_run):
     """One independent ARC enumeration over the ACTIVE production bounds."""
     excited = find_excited_state(
-        acfg.ATOM, lrf.LASER_PARAMS["probe"]["wavelength_nm"])
+        production_run["atom"], lrf.LASER_PARAMS["probe"]["wavelength_nm"])
     assert excited is not None, "the configured probe has no excited state"
     carrier_hz = float(lrf.RF_PARAMS["frequency_hz"])
     tolerance_hz = float(LEVEL_SELECTION_TOLERANCES["frequency_tolerance_hz"])
     candidates = _independent_fs_oracle(
-        acfg.ATOM, production_run["rf_n_range"], excited,
+        production_run["atom"], production_run["rf_n_range"], excited,
         carrier_hz, tolerance_hz, RF_MAX_L_TO_CHECK)
     return {
         "excited": excited,

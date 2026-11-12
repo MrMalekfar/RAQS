@@ -341,9 +341,11 @@ def parse_run_profile(document):
     return profile
 
 
-def load_run_profile(path):
+def load_run_profile(path, *, raw=None):
     try:
-        document = json.loads(Path(path).read_text(encoding='utf-8-sig'), object_pairs_hook=_unique_object,
+        if raw is None:
+            raw = Path(path).read_bytes()
+        document = json.loads(raw.decode('utf-8-sig'), object_pairs_hook=_unique_object,
                               parse_constant=_reject_constant)
     except (OSError, ValueError) as exc:
         raise PhysicsConfigurationError(f'LAB-006: cannot read profile {path!s}.') from exc

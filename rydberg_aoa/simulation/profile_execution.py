@@ -422,8 +422,8 @@ def save_profile_results(directory, result):
         arrays.update(angles=result['angles'], power=result['power'])
     spectrum = result.get('spectrum')
     if spectrum is not None:
-        arrays.update({'spectrum_' + key: value for key, value in spectrum.items()
-                       if value is not None and key not in ('analytical_contract', 'radiative_model', 'decay_rates_per_us')})
+        from .profile_spectrum import spectrum_arrays
+        arrays.update(spectrum_arrays(spectrum))
     np.savez_compressed(directory / 'simulation_arrays.npz', **arrays)
 
 

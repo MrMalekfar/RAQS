@@ -225,12 +225,21 @@ for mode in ('prescribed','experimental'):
     assert run.returncode==0,run.stdout+run.stderr
 
 
-@pytest.mark.parametrize('mode',['prescribed','experimental'])
-def test_real_cli_spawn_spectrum_if_and_saved_arrays(mode,tmp_path):
+@pytest.mark.parametrize('mode,backend', [
+    ('prescribed', None), ('experimental', None),
+    ('prescribed', 'direct'), ('prescribed', 'qutip'),
+])
+def test_real_cli_spawn_spectrum_if_and_saved_arrays(mode,backend,tmp_path):
     # Bound the regression, retaining actual ARC initialization, QuTiP, spawn and IF/AoA.
     data=document(mode)
     data['spectrum']['doppler_enabled']=False
     data['spectrum']['probe_offsets_mhz']=[-.5,0.,.5]
+    if backend is not None:
+        data['spectrum']['steady_state_backend']=backend
+        data['measurement']={'mode':'if_only', 'signal_enabled':True}
+        data['execution']['positions_m']=data['execution']['positions_m'][:1]
+        lo, signal = data['fields']['lo'], data['fields']['signal']
+        signal['frequency_hz']=2*lo['frequency_hz']-signal['frequency_hz']
     src=tmp_path/'input.json';src.write_text(json.dumps(data),encoding='utf-8')
     out=tmp_path/'result'
     run=subprocess.run([sys.executable,'-B','main.py','--profile',str(src),'--no-plots','--output-dir',str(out)],
@@ -239,12 +248,18 @@ def test_real_cli_spawn_spectrum_if_and_saved_arrays(mode,tmp_path):
     report=json.loads((out/'run_report.json').read_text(encoding='utf-8'))
     assert report['radiative_model']['model']=='selected_internal_spontaneous_e1'
     assert report['decay_rates_per_us']['rydberg2->ground']>0
-    assert report['sensing']['paths']==3 and report['sensing']['samples_per_path']==601
-    assert np.isfinite(report['sensing']['estimated_aoa_deg'])
+    paths=1 if backend is not None else 3
+    assert report['sensing']['paths']==paths and report['sensing']['samples_per_path']==601
+    if backend is None:
+        assert np.isfinite(report['sensing']['estimated_aoa_deg'])
+    else:
+        assert report['sensing']['estimated_aoa_deg'] is None
+        assert report['signed_if_mhz'] < 0
+        assert report['spectrum_declaration']['steady_state_backend']==backend
     assert report['applied_fields']==data['fields']
     assert report['initialization_fs_decay_rates_per_us']!=list(report['decay_rates_per_us'].values())
     with np.load(out/'simulation_arrays.npz',allow_pickle=False) as arrays:
-        assert arrays['time_traces'].shape==(3,601)
+        assert arrays['time_traces'].shape==(paths,601)
         assert arrays['spectrum_rf_on'].shape==(3,)
         assert np.all(np.isfinite(arrays['complex_responses']))
         for name in arrays.files:assert arrays[name].dtype.kind!='O',name

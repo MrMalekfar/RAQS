@@ -240,7 +240,11 @@ def main():
     from rydberg_aoa.simulation.profile_execution import execute_profile, json_default, save_profile_results
     import json
     from pathlib import Path
-    profile = load_run_profile(args.profile)
+    try:
+        raw = Path(args.profile).read_bytes()
+    except OSError as exc:
+        raise PhysicsConfigurationError(f'LAB-006: cannot read profile {args.profile}.') from exc
+    profile = load_run_profile(args.profile, raw=raw)
     logging.basicConfig(level=logging.ERROR if args.quiet else (logging.DEBUG if args.verbose else logging.INFO),
                         format='%(asctime)s - %(levelname)s - %(message)s')
     if profile.study is not None:
@@ -267,20 +271,29 @@ def main():
             import matplotlib.pyplot as plt
             plt.show()
         return report,study
+    directory = Path(args.output_dir) if args.output_dir else None
+    if directory is not None:
+        from rydberg_aoa.simulation.run_receipt import capture_run_provenance, write_run_receipt
+        directory.mkdir(parents=True, exist_ok=True)
+        if any(directory.iterdir()):
+            raise FileExistsError(f'Run output directory is not empty: {directory}')
+        provenance = capture_run_provenance()
+        with (directory / 'profile.json').open('xb') as snapshot:
+            snapshot.write(raw)
     report, result = execute_profile(profile, diagnostics_only=args.diagnostics_only)
     encoded = json.dumps(report, default=json_default, ensure_ascii=False, allow_nan=False, indent=2)
-    if args.output_dir:
-        directory = Path(args.output_dir)
-        directory.mkdir(parents=True, exist_ok=True)
-        (directory / 'run_report.json').write_text(encoded + '\n', encoding='utf-8')
-        if result is not None:
-            save_profile_results(directory, result)
-    print(encoded)
+    if directory is not None and result is not None:
+        save_profile_results(directory, result)
     if result is not None and not args.no_plots:
         from rydberg_aoa.visualization.profile_figures import create_profile_figures, save_profile_figures
         figures = create_profile_figures(report, result)
         if args.output_dir:
             save_profile_figures(directory, figures)
+    if directory is not None:
+        (directory / 'run_report.json').write_text(encoded + '\n', encoding='utf-8')
+        write_run_receipt(directory, sorted(p.name for p in directory.iterdir()), provenance)
+    print(encoded)
+    if result is not None and not args.no_plots:
         import matplotlib.pyplot as plt
         plt.show()
     return report, result

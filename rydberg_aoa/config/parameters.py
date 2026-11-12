@@ -133,12 +133,11 @@ def calculate_atomic_density_with_arc():
             feeding a fabricated number density into the susceptibility model.
     """
     try:
-        # During this module's initial import atomic_config has not installed
-        # its atom yet. Thereafter use the selected atom, including fraction.
+        # This explicit calculation uses the selected atom when configured.
         import sys
         from .atom_species import arc_density
         ac = sys.modules.get(__package__ + '.atomic_config')
-        if ac is not None and hasattr(ac, 'ATOM'):
+        if ac is not None and ac.ATOM is not None:
             atom, spec = ac.ATOM, ac.ATOM_SPEC
         else:
             atom, spec = get_arc_atom(LEGACY_ATOM), LEGACY_ATOM
@@ -156,8 +155,8 @@ def calculate_atomic_density_with_arc():
             "F05: no hard-coded density fallback."
         ) from e
 
-# Calculate atomic density at module load time
-CALCULATED_N0 = calculate_atomic_density_with_arc()
+# Published by explicit atomic configuration.
+CALCULATED_N0 = None
 
 # --- Heterodyne Time-Domain Simulation ---
 # Rabi frequencies will be calculated by atomic_config.py using ARC dipole moments

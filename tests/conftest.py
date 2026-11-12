@@ -25,11 +25,7 @@ Fixtures
 import pytest
 
 from rydberg_aoa.config import atomic_config as acfg
-from tests.atomic_init_support import (
-    ensure_resolved_atomic_physics,
-    restore_published_atomic_state,
-    snapshot_published_atomic_state,
-)
+from tests.atomic_init_support import ensure_resolved_atomic_physics
 
 
 @pytest.fixture
@@ -41,10 +37,12 @@ def atomic_physics():
     order.  At the documented QN-001A boundary the seam is transactional
     (nothing published), so the skip path leaves the runtime untouched.
     """
-    state = snapshot_published_atomic_state()
-    ensure_resolved_atomic_physics()   # pytest.skip propagates on the block
-    yield acfg
-    restore_published_atomic_state(state)
+    transaction = acfg._snapshot_pipeline_transaction()
+    try:
+        ensure_resolved_atomic_physics()   # pytest.skip propagates on the block
+        yield acfg
+    finally:
+        acfg._rollback_pipeline_transaction(transaction)
 
 
 @pytest.fixture
@@ -68,3 +66,14 @@ def published_atomic_state(monkeypatch):
     # this synthetic "nothing published" state (get_rf_orientation() -> None).
     monkeypatch.setattr(acfg, "_RF_ORIENTATION", None)
     return acfg
+
+
+@pytest.fixture
+def configured_atom():
+    """Select the real default atom without resolving a ladder."""
+    transaction = acfg._snapshot_pipeline_transaction()
+    try:
+        acfg.configure_atom(acfg.LEGACY_ATOM)
+        yield acfg.ATOM
+    finally:
+        acfg._rollback_pipeline_transaction(transaction)

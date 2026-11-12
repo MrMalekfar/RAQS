@@ -154,17 +154,23 @@ def test_null_colored_lo_campaign_is_supported_but_signal_noise_rejected(isolati
             noise=parse_noise_config(d),measurement=MeasurementOptions('if_only',False))
 
 
-def test_if_only_export_has_no_object_angles_phase_or_spatial_covariance(tmp_path):
+@pytest.mark.parametrize('backend', ['direct', 'qutip'])
+def test_if_only_export_has_no_object_angles_phase_or_spatial_covariance(tmp_path, backend):
     from rydberg_aoa.simulation.profile_execution import save_profile_results
     t=trial([1+2j]);times=t['tlist'];trace=np.ones(len(times))
     a,xf,yf=extract_if_component(trace,times,.1)
     t.update(worker_records=[(a,xf,yf,0,trace)],time_traces=[trace],array_positions=np.zeros((1,3)),
         configured_spatial_phases_rad=np.zeros(1),xf_0=xf,yf_0=yf)
     t.pop('readout_noise')
+    t['spectrum'] = dict(steady_state_backend=backend, radiative_model={'model': 'prepared'},
+                         decay_rates_per_us={'2->1': 1.}, rf_on=np.array([.25, .5]))
     save_profile_results(tmp_path,t)
     data=np.load(tmp_path/'simulation_arrays.npz',allow_pickle=False)
     assert not set(data.files)&{'angles','power','element_phases_rad','if_snapshots','sample_covariance','trial_estimated_aoa_deg'}
     assert all(data[k].dtype.kind!='O' for k in data.files)
+    np.testing.assert_array_equal(data['spectrum_rf_on'], [.25, .5])
+    assert not {'spectrum_steady_state_backend', 'spectrum_radiative_model',
+                'spectrum_decay_rates_per_us'} & set(data.files)
 
 
 def _run(profile):

@@ -144,16 +144,16 @@ def test_live_nonuniform_grid_reaches_spectrum_and_saved_arrays(tmp_path, mode):
     profile = tmp_path / 'profile.json'
     profile.write_text(json.dumps(data), encoding='utf-8')
     process = subprocess.run([sys.executable, '-B', 'main.py', '--profile', str(profile), '--no-plots',
-                              '--output-dir', str(tmp_path)], cwd=ROOT, capture_output=True,
+                              '--output-dir', str(tmp_path / 'run')], cwd=ROOT, capture_output=True,
                              text=True, encoding='utf-8', errors='replace', timeout=180)
     assert process.returncode == 0, process.stdout + process.stderr
-    report = json.loads((tmp_path / 'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path / 'run' / 'run_report.json').read_text(encoding='utf-8'))
     expected = [-.5, -.25, 0., .125, .25]
     assert report['spectrum_declaration']['probe_offsets_mhz'] == expected
     assert report['applied_fields'] == data['fields']
     assert report['mode'] == mode and report['spectrum_computed']
     assert report['sensing']['estimated_aoa_deg'] == -30.
-    with np.load(tmp_path / 'simulation_arrays.npz', allow_pickle=False) as arrays:
+    with np.load(tmp_path / 'run' / 'simulation_arrays.npz', allow_pickle=False) as arrays:
         np.testing.assert_array_equal(arrays['spectrum_probe_offsets_mhz'], expected)
         for key in ('rf_off', 'rf_on', 'rf_off_analytical', 'rf_on_analytical'):
             assert arrays['spectrum_' + key].shape == (5,)

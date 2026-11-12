@@ -19,17 +19,17 @@ def test_actual_full_entry_has_spectrum_and_preserves_if_arrays(tmp_path, mode):
     profile = tmp_path / 'profile.json'
     profile.write_text(json.dumps(data))
     process = subprocess.run([sys.executable, '-B', 'main.py', '--profile', str(profile), '--no-plots',
-                              '--output-dir', str(tmp_path)], cwd=ROOT, capture_output=True,
+                              '--output-dir', str(tmp_path / 'run')], cwd=ROOT, capture_output=True,
                              text=True, encoding='utf-8', errors='replace', timeout=180)
     assert process.returncode == 0, process.stdout + process.stderr
-    report = json.loads((tmp_path / 'run_report.json').read_text(encoding='utf-8'))
+    report = json.loads((tmp_path / 'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['applied_fields'] == data['fields']
     assert report['mode'] == mode and report['spectrum_computed']
     assert report['doppler_ensemble_included'] and not report['temporal_doppler_ensemble_included']
     assert report['sensing']['estimated_aoa_deg'] == report['sensing']['true_aoa_deg'] == -30.
     assert report['detunings_mhz'][1] == pytest.approx(.25, abs=1e-6)
     assert report['resolved_rate_budget_per_us']['pure_dephasing'] == report['sensing']['execution']['dephasing_rates_per_us']
-    with np.load(tmp_path / 'simulation_arrays.npz', allow_pickle=False) as arrays:
+    with np.load(tmp_path / 'run' / 'simulation_arrays.npz', allow_pickle=False) as arrays:
         assert arrays['time_traces'].shape == (3, 601)
         assert arrays['if_snapshots'].shape[0] == 3
         assert arrays['sample_covariance'].shape == (3, 3)
@@ -40,7 +40,7 @@ def test_actual_full_entry_has_spectrum_and_preserves_if_arrays(tmp_path, mode):
         assert np.isfinite(arrays['spectrum_rf_on']).all()
         assert not np.array_equal(arrays['spectrum_rf_on'], arrays['spectrum_rf_off'])
         assert arrays['spectrum_transit_rate_per_us'] == report['resolved_rate_budget_per_us']['transit_reset']
-    assert not (tmp_path / 'sensing.png').exists() and not (tmp_path / 'spectrum.png').exists()
+    assert not (tmp_path / 'run' / 'sensing.png').exists() and not (tmp_path / 'run' / 'spectrum.png').exists()
     if mode == 'prescribed':
         assert 'no level search' in process.stdout
         assert 'Scanning RF' not in process.stdout

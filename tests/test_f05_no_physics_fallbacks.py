@@ -438,7 +438,7 @@ def test_atomic_config_import_is_never_silently_zero():
 # ---------------------------------------------------------------------------
 # 8. F05 completion pass — the two category-A leftovers (O-2 + manager)
 # ---------------------------------------------------------------------------
-def test_atomic_density_fails_fast_instead_of_default_constant(monkeypatch):
+def test_atomic_density_fails_fast_instead_of_default_constant(configured_atom, monkeypatch):
     """F05-16 (report item O-2, previously BLOCKED): ARC density failure
     must raise a PhysicsError naming F05, never return the 1.0e15 constant."""
     parameters = importlib.import_module("rydberg_aoa.config.parameters")
