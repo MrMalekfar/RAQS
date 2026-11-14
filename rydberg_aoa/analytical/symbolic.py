@@ -1,14 +1,14 @@
 """
 Symbolic (SymPy) derivation of the exact steady-state probe coherence.
 
-This module derives the closed-form steady-state solution of the 4-level
+This module derives the weak-probe steady-state coherence of the 4-level
 cascade Optical Bloch Equations (OBEs) directly from the SAME Hamiltonian and
 collapse-operator conventions used by the numerical solver
 (`physics.hamiltonian.create_sensor_model`). Because the derivation starts
-from the identical Lindblad structure, analytical/numerical parity is
-guaranteed by construction (resolves audit findings P-1 and P-3).
+from the same Lindblad structure, the result is the linear term in probe
+Rabi frequency of the numerical steady-state coherence.
 
-Physics model (rotating frame, hbar = 1, all rates in rad/us):
+Physics model (rotating frame, hbar = 1, frequencies in rad/us, rates in 1/us):
     H = Delta_p|2><2| + (Delta_p+Delta_c)|3><3| + (Delta_p+Delta_c+Delta_rf)|4><4|
         - Omega_p/2 (|1><2| + |2><1|)
         - Omega_c/2 (|2><3| + |3><2|)
@@ -45,11 +45,11 @@ def _build_lindblad():
     """Construct the symbolic Lindblad generator L(rho) for the 4-level cascade.
 
     Returns:
-        tuple: (L, rho, symbols_dict) where L is a 4x4 SymPy Matrix whose
+        tuple: (L, rho, symbols_dict, coherence_pairs, populations). L is a 4x4 SymPy Matrix whose
             (i, j) entry is d(rho_ij)/dt, rho is the symbolic density matrix,
             and symbols_dict maps parameter names to SymPy symbols.
     """
-    # --- Physical parameters (all real, all in rad/us) ---
+    # --- Frequencies [rad/us] and nonnegative event rates [1/us] ---
     # Delta_p = omega_probe - omega_21   — probe detuning
     # Delta_c = omega_coupling - omega_32 — coupling detuning
     # Delta_rf = omega_rf - omega_43     — RF detuning
@@ -58,8 +58,8 @@ def _build_lindblad():
     # deph_2/3/4                          — pure dephasing rates on levels |2>,|3>,|4|
     dp, dc, drf = sp.symbols('Delta_p Delta_c Delta_rf', real=True)
     Op, Oc, Orf = sp.symbols('Omega_p Omega_c Omega_rf', real=True)
-    g21, g32, g43 = sp.symbols('gamma_21 gamma_32 gamma_43', real=True)
-    d2, d3, d4 = sp.symbols('deph_2 deph_3 deph_4', real=True)
+    g21, g32, g43 = sp.symbols('gamma_21 gamma_32 gamma_43', nonnegative=True)
+    d2, d3, d4 = sp.symbols('deph_2 deph_3 deph_4', nonnegative=True)
     sym = dict(dp=dp, dc=dc, drf=drf, Op=Op, Oc=Oc, Orf=Orf,
                g21=g21, g32=g32, g43=g43, d2=d2, d3=d3, d4=d4)
 
@@ -138,18 +138,6 @@ def _build_lindblad():
     return L, rho, sym, coh, (p1, p2, p3, p4)
 
 
-def _split_real_imag(expr):
-    """Split an expanded SymPy expression into (real_part, imag_part).
-
-    Valid because every term of the fully expanded Lindblad generator is a
-    real-coefficient monomial optionally multiplied by the single factor I.
-    """
-    expr = sp.expand(expr)
-    real = expr.subs(sp.I, 0)           # drops all I-containing terms
-    imag = sp.expand((expr - real) / sp.I)
-    return real, imag
-
-
 def _derive_weak_probe():
     """Derive rho_12 and rho_21 to first order in Omega_p (weak-probe limit).
 
@@ -164,39 +152,24 @@ def _derive_weak_probe():
     """
     t0 = time.perf_counter()
     L, _, sym, coh, pops = _build_lindblad()
-    p1, p2, p3, p4 = pops
     dp, dc, drf = sym['dp'], sym['dc'], sym['drf']
     Op, Oc, Orf = sym['Op'], sym['Oc'], sym['Orf']
 
-    # Zeroth-order populations: unsaturated ground state
-    pop_sub = {p1: 1, p2: 0, p3: 0, p4: 0}
-    coh_vars = [v for pair in coh.values() for v in pair]
-
-    # Assemble the real linear system M u = b for the 12 real unknowns
-    # (Re/Im of the six coherences), discarding O(Omega_p^2) terms.
-    equations = []
-    unknowns = []
-    for (i, j) in sorted(coh.keys()):
-        x, y = coh[(i, j)]
-        unknowns += [x, y]
-        lij = L[i - 1, j - 1].subs(pop_sub)
-        real, imag = _split_real_imag(lij)
-        for eq in (real, imag):
-            # Keep only terms linear in Omega_p: drop Op*coherence products
-            filtered = sum(
-                term for term in sp.Add.make_args(eq)
-                if not (term.has(Op) and any(term.has(v) for v in coh_vars))
-            )
-            equations.append(filtered)
-
-    sol = sp.linsolve(equations, unknowns)
-    sol_tuple = next(iter(sol))
-    sol_map = dict(zip(unknowns, sol_tuple))
-
-    # rho_12 = <1|rho|2> = x12 + I*y12 ; rho_21 = conj(rho_12)
-    x12, y12 = coh[(1, 2)]
-    rho12 = sp.expand(sol_map[x12] + sp.I * sol_map[y12])
-    rho21 = sp.expand(sol_map[x12] - sp.I * sol_map[y12])
+    # At first order only ground-to-excited coherences are driven. Their
+    # three rows couple to each other without conjugates or excited coherences.
+    ground = dict(zip(pops, (1, 0, 0, 0)))
+    no_coherence = dict.fromkeys((v for pair in coh.values() for v in pair), 0)
+    z = sp.symbols('z12 z13 z14')
+    projected = {**ground, **no_coherence, Op: 0}
+    for j, coherence in enumerate(z, start=2):
+        projected[coh[1, j][0]] = coherence
+    equations = [L[0, j].xreplace(projected) + L[0, j].xreplace({**ground, **no_coherence})
+                 for j in range(1, 4)]
+    matrix, rhs = sp.linear_eq_to_matrix(equations, z)
+    numerator = matrix.copy()
+    numerator[:, 0] = rhs
+    rho12 = numerator.det() / matrix.det()
+    rho21 = sp.conjugate(rho12)
 
     arg_symbols = (dp, dc, drf, Op, Oc, Orf,
                    sym['g21'], sym['g32'], sym['g43'],
@@ -259,8 +232,8 @@ def calculate_rho21_exact(delta_p, delta_c, delta_rf,
     Args:
         delta_p, delta_c, delta_rf: Detunings [rad/us] (scalar or array).
         omega_p, omega_c, omega_rf: Rabi frequencies [rad/us].
-        gammas: [gamma_21, gamma_32, gamma_43] decay rates [rad/us].
-        dephasings: [deph_2, deph_3, deph_4] pure dephasing rates [rad/us].
+        gammas: [gamma_21, gamma_32, gamma_43] nonnegative decay rates [1/us].
+        dephasings: [deph_2, deph_3, deph_4] nonnegative dephasing rates [1/us].
         mode: Solver mode passed to get_symbolic_rho21_solver.
         rf_orientation: RF-DIR-001C - RFTransitionOrientation | None.  For a
             downward RF edge the cached +Delta_rf derivation is evaluated at
