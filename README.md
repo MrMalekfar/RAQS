@@ -4,6 +4,12 @@ RAQS نرم‌افزاری پژوهشی برای مدل‌سازی پاسخ حس
 
 ## شروع
 
+برای اجرای رابط گرافیکی در ویندوز، فایل ZIP مخزن را کامل از حالت فشرده خارج کنید. اگر Python 3.11 نسخهٔ ۶۴ بیتی را ندارید، آن را همراه با Python Launcher نصب کنید. سپس در پوشهٔ استخراج‌شده روی **Launch RAQS GUI.cmd** دوبار کلیک کنید. لانچر محیط پروژه را می‌سازد و بسته‌های لازم را نصب می‌کند. برای دانلود بسته‌ها در اجرای اول اتصال اینترنت لازم است. [دریافت Python برای ویندوز](https://www.python.org/downloads/release/python-3119/) · [راهنمای رابط گرافیکی](docs/gui.md)
+
+برای ساخت نصب‌کنندهٔ مستقل از Python سیستم، از گردش‌کار **Windows installer** در GitHub Actions استفاده کنید. [راهنمای ساخت، آزمون و دریافت فایل نصب](docs/gui.md#ساخت-و-آزمون-نصبکننده)
+
+### اجرای خط فرمان
+
 از ریشهٔ مخزن، در PowerShell با Python 3.11:
 
 ```powershell
@@ -31,8 +37,6 @@ py -3.11 -m venv .venv
 [راهنمای پژوهشی](docs/README.md)، [اجرای پروفایل و تفسیر خروجی](docs/usage.md) و [نقشهٔ مثال‌ها](examples/README.md) جزئیات را توضیح می‌دهند.
 
 ## آزمون و توسعه
-
-Launch the English desktop Research Workbench with `python -m raqs_gui`. See the [GUI guide](docs/gui.md) for optional installation, configuration, execution, result review and current limits. The workbench uses the existing physical model.
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest tests/test_lab006_live_entrypoint.py -q -rA -s
