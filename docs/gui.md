@@ -2,19 +2,38 @@
 
 The workbench is a local English-language PySide6 desktop interface over the existing RAQS profile and simulation APIs. It improves configuration, execution visibility and measurement review without changing the physical model, units, baselines, seeds or solver tolerances.
 
-## Install and launch
+## نصب و اجرا در ویندوز
 
-On Windows, double-click **Launch RAQS GUI.cmd** in the project folder after the initial setup. The launcher uses the project's `.venv` and keeps its console open if startup fails so you can read the error.
+1. فایل ZIP مخزن را در پوشه‌ای که اجازهٔ نوشتن در آن دارید کامل استخراج کنید.
+2. اگر Python 3.11 نسخهٔ ۶۴ بیتی را ندارید، آن را نصب کنید و گزینهٔ Python Launcher را فعال بگذارید. [دریافت Python برای ویندوز](https://www.python.org/downloads/release/python-3119/)
+3. در پوشهٔ استخراج‌شده روی **Launch RAQS GUI.cmd** دوبار کلیک کنید. لانچر `.venv` را می‌سازد، وابستگی‌های `requirements-gui.txt` را در آن نصب می‌کند و رابط را باز می‌کند. اجرای اول برای دانلود بسته‌ها به اینترنت نیاز دارد و ممکن است چند دقیقه طول بکشد.
 
-From the repository root, using the project Python environment:
+اگر نصب بسته‌ها خطا داد، پنجره باز می‌ماند تا پیام را بخوانید. پس از رفع خطا همان فایل را دوباره اجرا کنید. اگر پیام خطا به نسخه یا خرابی `.venv` اشاره کرد، نام آن پوشه را عوض کنید و دوباره لانچر را اجرا کنید تا محیط تازه‌ای بسازد.
+
+برای نصب و اجرا از PowerShell، دستورهای زیر را در ریشهٔ مخزن اجرا کنید. اگر `.venv` را از قبل ساخته‌اید، از دستور دوم شروع کنید.
 
 ```powershell
+py -3.11 -m venv .venv
 & ./.venv/Scripts/python.exe -m pip install -r requirements-gui.txt
 & ./.venv/Scripts/python.exe -m pip check
 & ./.venv/Scripts/python.exe -m raqs_gui
 ```
 
-The optional GUI requirements use PySide6-Essentials 6.10.3. CLI-only installations do not need Qt. The application still runs from this checkout; no standalone installer is provided.
+وابستگی‌های رابط گرافیکی شامل PySide6-Essentials 6.10.3 هستند. برای اجرای خط فرمان، `requirements.txt` کافی است. اجرای لانچر به Python نصب‌شده روی ویندوز نیاز دارد.
+
+## ساخت و آزمون نصب‌کننده
+
+در GitHub به **Actions → Windows installer → Run workflow** بروید. ارسال تگی مانند `v1.0.0` هم ساخت همان نسخه را شروع می‌کند. گردش‌کار روی ویندوز x64، Python 3.11 و وابستگی‌های رابط را همراه با RAQS بسته‌بندی می‌کند. سپس فایل نصب را در یک پوشهٔ آزمایشی اجرا می‌کند، میانبر منوی Start را می‌سنجد و با Python همراه برنامه یک محاسبهٔ نمونه را از رابط گرافیکی اجرا می‌کند.
+
+بعد از موفقیت آزمون، فایل `RAQS-Setup.exe` از بخش **Artifacts** همان اجرا، داخل بستهٔ **RAQS-Windows-x64**، در دسترس است. اجرای ناشی از تگ، همان فایل را در **Assets** انتشار می‌گذارد. نصب‌کننده برای حساب فعلی نصب می‌شود و یک میانبر به نام **RAQS Research Workbench** در منوی Start می‌سازد. مسیر پیش‌فرض نتایج در پوشهٔ Documents کاربر، زیر **RAQS Results**، است.
+
+برای ساخت محلی، در ویندوز x64 با Python 3.11، Git و Inno Setup 6.3 یا بالاتر، دستور زیر را از ریشهٔ مخزن اجرا کنید. دسترسی به مخزن بسته‌های Python برای مرحلهٔ ساخت لازم است.
+
+```powershell
+py -3.11 packaging/windows/build_installer.py 1.0.0
+```
+
+خروجی در `outputs/windows-installer/RAQS-Setup.exe` قرار می‌گیرد. فایل تولیدشده در این گردش‌کار امضای دیجیتال ندارد. متن مجوزهای بسته‌ها و پیوند سورس Qt و PySide6 همراه نصب‌کننده در دسترس است.
 
 ## First complete workflow
 

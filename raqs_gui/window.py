@@ -5,7 +5,7 @@ import sys
 import time
 from uuid import uuid4
 
-from PySide6.QtCore import QProcess, QProcessEnvironment, QTimer, Qt, QThreadPool
+from PySide6.QtCore import QProcess, QProcessEnvironment, QStandardPaths, QTimer, Qt, QThreadPool
 from PySide6.QtGui import QDesktopServices, QFont, QFontDatabase, QPixmap
 from PySide6.QtCore import QUrl
 from PySide6.QtWidgets import (QFileDialog, QMainWindow, QMessageBox, QPlainTextEdit,
@@ -66,6 +66,9 @@ class MainWindow(QMainWindow):
         from .workbench import build_workbench
         self.started_at = None
         build_workbench(self, ROOT, text_view)
+        if sys.flags.isolated and Path(sys.executable).resolve().parent == ROOT / 'runtime':
+            documents = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+            self.output.setText(str(Path(documents) / 'RAQS Results'))
         available = self.screen().availableGeometry()
         self.resize(min(1380, available.width() - 36), min(880, available.height() - 64))
         self.setMinimumSize(900, 555)
@@ -364,7 +367,10 @@ class MainWindow(QMainWindow):
         self.timer.start()
         arguments = ['-u', '-m', 'raqs_gui.worker', str(directory), 'diagnostics' if diagnostics else 'sensing']
         if sys.platform == 'win32': arguments.append('--managed')
-        self.process.start(sys.executable, arguments)
+        executable = Path(sys.executable)
+        if executable.name.lower() == 'pythonw.exe':
+            executable = executable.with_name('python.exe')
+        self.process.start(str(executable), arguments)
 
     def authorize_worker(self):
         ready = self.run_directory / 'worker_ready.json'
