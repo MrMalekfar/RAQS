@@ -288,20 +288,6 @@ def _find_rf_transitions_analytical(from_level: AtomicLevel,
             "F05: no placeholder dipole."
         )
 
-        # Create Transition object
-        transition = Transition(
-            level1=level1,
-            level2=level2,
-            wavelength_nm=(3e8 / trans_dict['frequency_hz']) * 1e9,
-            dipole_moment=dipole_si,
-            rabi_frequency=0.0,  # Will be calculated later
-            detuning=0.0,
-            linewidth=0.0  # RF linewidth
-        )
-
-        transitions.append(transition)
-        logger.debug(f"Analytical RF transition: {level1.label} -> {level2.label} at {trans_dict['frequency_hz']/1e6:.1f} MHz, dipole={dipole_si:.2e}")
-
     logger.info(f"Found {len(transitions)} analytical RF transitions")
     return transitions
 

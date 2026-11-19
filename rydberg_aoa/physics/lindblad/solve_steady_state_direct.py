@@ -45,7 +45,7 @@ import qutip
 
 from ...utils.validation import validate_steady_state
 
-__all__ = ["solve_steady_state_direct"]
+__all__ = ["solve_steady_state_direct", "DetuningAffineSteadyState"]
 
 # Documented trace-row weight conventions.
 _TRACE_WEIGHT_SCALE = "scale"   # mean |L| of the dense Liouvillian (default)
@@ -72,6 +72,100 @@ def _trace_functional(n: int) -> np.ndarray:
     e = np.zeros(n * n, dtype=complex)
     e[np.arange(n) * (n + 1)] = 1.0
     return e
+
+
+
+def _solve_trace_constrained(ldense, n, trace_weight="scale",
+                             context="solve_steady_state_direct"):
+    """Shared core: solve ``L vec(rho) = 0, Tr(rho) = 1`` for a dense L.
+
+    Used by :func:`solve_steady_state_direct` and by
+    :class:`DetuningAffineSteadyState`; both therefore run the identical
+    linear algebra and the identical NUM-SS-001 certification.
+    """
+    dim = n * n
+    # Trace-constrained augmented system:  A @ vec(rho) = b, Tr(rho) = 1.
+    # The LAST row is REPLACED: zero it completely first (DOP-003P lesson:
+    # overwriting only the diagonal of an unmodified Liouvillian row mixes
+    # population-rate equations into the constraint), then load the trace
+    # functional scaled by the chosen weight.
+    a = ldense.copy()
+    b = np.zeros(dim, dtype=complex)
+    if trace_weight == "scale":
+        weight = float(np.mean(np.abs(ldense)))
+    else:
+        weight = 1.0
+    trace_row = _trace_functional(n)
+    a[-1, :] = 0.0
+    a[-1, :] = weight * trace_row
+    b[-1] = weight
+
+    vec_rho = np.linalg.solve(a, b)
+    rho = _unvec(vec_rho, n)
+
+    # NUM-SS-001 fail-loud gate: certify the state BEFORE any consumer can
+    # reach it.  ``ldense`` is the ORIGINAL Liouvillian captured before the
+    # last row was replaced by the trace constraint, i.e. exactly the
+    # generator whose stationary state was solved for.  A rejected state is
+    # raised, never repaired, renormalized or replaced (F05).
+    validate_steady_state(
+        rho, ldense,
+        context=context, backend="direct",
+    )
+
+    return rho, vec_rho, a, weight, trace_row
+
+
+class DetuningAffineSteadyState:
+    """Steady-state probe coherence for many (delta_p, delta_c) pairs.
+
+    Performance kernel for the Doppler velocity integral.  For a ladder
+    model whose rotating-frame Hamiltonian carries the probe detuning on
+    every level above the ground state and the coupling detuning on every
+    level above the intermediate state, the Liouvillian is AFFINE in the
+    two optical detunings:
+
+        L(dp, dc) = L(0, 0) - i * (dp * (a_i - a_j) + dc * (b_i - b_j))
+
+    on the element rho_ij, with a = (0, 1, 1, ...), b = (0, 0, 1, ...).
+    The reference Liouvillian L(0, 0) is built ONCE from the caller's own
+    (H, c_ops); each further velocity class then costs one small dense
+    solve instead of rebuilding QuTiP operators.  The same trace-constrained
+    solve and the same NUM-SS-001 certification as
+    :func:`solve_steady_state_direct` are applied to every state.
+
+    The affine structure is an assumption about the model builder, so the
+    caller MUST confirm parity against the reference path before trusting
+    this kernel (``simulate_spectrum`` does so at every scan point and
+    falls back to the reference path on any disagreement).
+    """
+
+    def __init__(self, H0, c_ops, observable):
+        if not H0.isherm:
+            raise ValueError("DetuningAffineSteadyState requires Hermitian H.")
+        self.n = int(H0.shape[0])
+        if self.n < 3:
+            raise ValueError("DetuningAffineSteadyState requires a ladder of >= 3 levels.")
+        self._l0 = np.asarray(qutip.liouvillian(H0, list(c_ops)).full(), dtype=complex)
+        self._obs = np.asarray(observable.full(), dtype=complex)
+        n = self.n
+        a = np.zeros(n); a[1:] = 1.0
+        b = np.zeros(n); b[2:] = 1.0
+        # column stacking: vec index of rho[i, j] is j * n + i
+        i = np.tile(np.arange(n), n)
+        j = np.repeat(np.arange(n), n)
+        self._gen_p = -1j * (a[i] - a[j])
+        self._gen_c = -1j * (b[i] - b[j])
+        self._diag = np.arange(n * n)
+
+    def coherence(self, delta_p, delta_c):
+        """Tr[observable * rho_ss] at optical detunings (delta_p, delta_c)."""
+        ldense = self._l0.copy()
+        ldense[self._diag, self._diag] += (
+            float(delta_p) * self._gen_p + float(delta_c) * self._gen_c)
+        rho = _solve_trace_constrained(
+            ldense, self.n, "scale", context="DetuningAffineSteadyState")[0]
+        return complex(np.trace(self._obs @ rho))
 
 
 def solve_steady_state_direct(H, c_ops, trace_weight: str = "scale",
@@ -144,34 +238,8 @@ def solve_steady_state_direct(H, c_ops, trace_weight: str = "scale",
             % (ldense.shape, dim, n)
         )
 
-    # Trace-constrained augmented system:  A @ vec(rho) = b, Tr(rho) = 1.
-    # The LAST row is REPLACED: zero it completely first (DOP-003P lesson:
-    # overwriting only the diagonal of an unmodified Liouvillian row mixes
-    # population-rate equations into the constraint), then load the trace
-    # functional scaled by the chosen weight.
-    a = ldense.copy()
-    b = np.zeros(dim, dtype=complex)
-    if trace_weight == "scale":
-        weight = float(np.mean(np.abs(ldense)))
-    else:
-        weight = 1.0
-    trace_row = _trace_functional(n)
-    a[-1, :] = 0.0
-    a[-1, :] = weight * trace_row
-    b[-1] = weight
-
-    vec_rho = np.linalg.solve(a, b)
-    rho = _unvec(vec_rho, n)
-
-    # NUM-SS-001 fail-loud gate: certify the state BEFORE any consumer can
-    # reach it.  ``ldense`` is the ORIGINAL Liouvillian captured before the
-    # last row was replaced by the trace constraint, i.e. exactly the
-    # generator whose stationary state was solved for.  A rejected state is
-    # raised, never repaired, renormalized or replaced (F05).
-    validate_steady_state(
-        rho, ldense,
-        context="solve_steady_state_direct", backend="direct",
-    )
+    rho, vec_rho, a, weight, trace_row = _solve_trace_constrained(
+        ldense, n, trace_weight, context="solve_steady_state_direct")
 
     if not return_diagnostics:
         return qutip.Qobj(rho)

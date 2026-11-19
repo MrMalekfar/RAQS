@@ -62,7 +62,10 @@ def test_actual_main_arc_spawn_if_and_doa(tmp_path):
     report = json.loads((tmp_path / 'run_report.json').read_text(encoding='utf-8'))
     assert report['diagnostics_only'] is False
     assert report['sensing']['paths'] == 3 and report['sensing']['samples_per_path'] == 601
-    assert report['sensing']['true_aoa_deg'] == report['sensing']['estimated_aoa_deg'] == -30.
+    # The estimate is refined between scan-grid points, so it is no longer
+    # snapped to exactly -30; the atomic phase error is far below 0.01 deg.
+    assert report['sensing']['true_aoa_deg'] == -30.
+    assert abs(report['sensing']['estimated_aoa_deg'] + 30.) < 1e-2
     assert report['signed_if_mhz'] == .1
     assert abs(report['detunings_rad_per_us'][0]) < 1e-6
     assert abs(report['detunings_rad_per_us'][1]) < 1e-6

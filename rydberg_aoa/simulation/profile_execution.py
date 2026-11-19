@@ -288,6 +288,12 @@ def execute_profile(profile, *, diagnostics_only=False, drive_realizations=None,
             if receiver.mode == 'aoa':
                 report['sensing']['doa_effective_settings'] = result['doa_result'].diagnostics['effective_settings']
                 report['sensing']['doa_settings_source'] = result['doa_result'].diagnostics['settings_source']
+                # Grid estimators refine the peak between scan-grid points; the
+                # historical grid angle stays in the report beside the estimate.
+                for report_key, diagnostic_key in (('estimated_aoa_grid_deg', 'grid_azimuth_deg'),
+                                                   ('doa_peak_refined', 'peak_refined')):
+                    if diagnostic_key in result['doa_result'].diagnostics:
+                        report['sensing'][report_key] = result['doa_result'].diagnostics[diagnostic_key]
             else:
                 report['sensing']['doa_status']='not executed: IF-only receiver'
         if profile.magnetic_core is not None:

@@ -152,7 +152,7 @@ def test_live_nonuniform_grid_reaches_spectrum_and_saved_arrays(tmp_path, mode):
     assert report['spectrum_declaration']['probe_offsets_mhz'] == expected
     assert report['applied_fields'] == data['fields']
     assert report['mode'] == mode and report['spectrum_computed']
-    assert report['sensing']['estimated_aoa_deg'] == -30.
+    assert abs(report['sensing']['estimated_aoa_deg'] + 30.) < 1e-3  # refined, not grid-snapped
     with np.load(tmp_path / 'run' / 'simulation_arrays.npz', allow_pickle=False) as arrays:
         np.testing.assert_array_equal(arrays['spectrum_probe_offsets_mhz'], expected)
         for key in ('rf_off', 'rf_on', 'rf_off_analytical', 'rf_on_analytical'):

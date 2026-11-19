@@ -17,6 +17,7 @@ from typing import Any, Dict, Optional
 import numpy as np
 
 from .geometry import ArrayGeometry
+from .peak_refinement import refine_quadratic_form_peak
 from .steering import steering_vector
 
 # Same scan grid as the legacy production estimator: one degree steps
@@ -139,6 +140,11 @@ class PhaseBeamformingEstimator(DOAEstimator):
         s(az)   = exp(-j phi(az))
         P(az)   = |s(az)^T x|^2
 
+    The reported azimuth is the stationary point of the same beam power
+    between the grid neighbours of the grid peak (``refine_peak=True``,
+    default); ``refine_peak=False`` returns the historical grid angle, which
+    is always available as ``diagnostics["grid_azimuth_deg"]``.
+
     An exactly zero response cannot supply an arrival angle. No amplitude
     threshold is imposed on nonzero responses; unrepresentable scan power
     fails explicitly instead of selecting an arbitrary scan-grid entry.
@@ -147,7 +153,8 @@ class PhaseBeamformingEstimator(DOAEstimator):
     algorithm = "phase_beamforming"
     required_capabilities = frozenset({"arbitrary"})
 
-    def __init__(self, scan_azimuth_deg=None, elevation_deg=0.0):
+    def __init__(self, scan_azimuth_deg=None, elevation_deg=0.0, refine_peak=True):
+        self.refine_peak = bool(refine_peak)
         if scan_azimuth_deg is None:
             self.scan_azimuth_deg = DEFAULT_AZIMUTH_SCAN_DEG
         else:
@@ -191,15 +198,25 @@ class PhaseBeamformingEstimator(DOAEstimator):
                 "one positive value; no arrival angle was selected."
             )
         peak_index = int(np.argmax(power))
+        azimuth, refined = float(grid[peak_index]), False
+        if self.refine_peak:
+            # |s^T x|^2 = m^H (x x^H) m with m = conj(s): refine between the
+            # grid neighbours of the peak (see doa.peak_refinement).
+            vector = np.asarray(arr, dtype=complex)
+            azimuth, refined = refine_quadratic_form_peak(
+                positions, frequency_hz, self.elevation_deg,
+                np.outer(vector, vector.conj()), grid, peak_index, maximize=True)
         return DOAResult(
             algorithm=self.algorithm,
-            azimuth_deg=float(grid[peak_index]),
+            azimuth_deg=azimuth,
             elevation_deg=self.elevation_deg,
             spectrum=power,
             scan_grid=grid,
             diagnostics={
                 "frequency_hz": frequency_hz,
                 "peak_index": peak_index,
+                "grid_azimuth_deg": float(grid[peak_index]),
+                "peak_refined": refined,
                 "n_elements": geometry.m,
                 "capabilities": dict(geometry.capabilities),
             },

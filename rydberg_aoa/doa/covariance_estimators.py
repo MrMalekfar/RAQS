@@ -39,6 +39,7 @@ from .estimators import (
     InvalidContextError,
 )
 from .geometry import ArrayGeometry
+from .peak_refinement import refine_quadratic_form_peak
 from .snapshots import IFSnapshotData, sample_covariance
 from .steering import steering_matrix
 __all__ = [
@@ -138,8 +139,10 @@ class SnapshotDOAEstimator(DOAEstimator):
     algorithm = "snapshot_base"
     required_capabilities = frozenset({"arbitrary"})
 
-    def __init__(self, scan_azimuth_deg=None, elevation_deg: float = 0.0):
+    def __init__(self, scan_azimuth_deg=None, elevation_deg: float = 0.0,
+                 refine_peak: bool = True):
         self.scan_azimuth_deg = _resolve_scan_grid(scan_azimuth_deg)
+        self.refine_peak = bool(refine_peak)
         self.elevation_deg = float(elevation_deg)
         if not np.isfinite(self.elevation_deg):
             raise ValueError(f"elevation_deg must be finite; got {elevation_deg!r}")
@@ -199,6 +202,23 @@ class SnapshotDOAEstimator(DOAEstimator):
     def _estimate_impl(self, data, geometry, context=None):
         raise NotImplementedError
 
+    def _refined_azimuth(self, geometry, frequency_hz, matrix, peak_index,
+                         maximize, diagnostics):
+        """Sub-grid angle of the same quadratic form (doa.peak_refinement).
+
+        Records the historical grid angle and whether refinement was
+        applied; ``refine_peak=False`` keeps the grid angle.
+        """
+        grid = self.scan_azimuth_deg
+        azimuth, refined = float(grid[peak_index]), False
+        if self.refine_peak:
+            azimuth, refined = refine_quadratic_form_peak(
+                geometry.positions_m, frequency_hz, self.elevation_deg,
+                matrix, grid, peak_index, maximize=maximize)
+        diagnostics["grid_azimuth_deg"] = float(grid[peak_index])
+        diagnostics["peak_refined"] = refined
+        return azimuth
+
 class BartlettEstimator(SnapshotDOAEstimator):
     """Conventional (Bartlett) beamformer on the sample covariance.
 
@@ -231,9 +251,11 @@ class BartlettEstimator(SnapshotDOAEstimator):
             "raw_spectrum": np.asarray(raw, dtype=float),
             "capabilities": dict(geometry.capabilities),
         })
+        azimuth = self._refined_azimuth(
+            geometry, frequency_hz, rxx, peak_index, True, diag)
         return DOAResult(
             algorithm=self.algorithm,
-            azimuth_deg=float(grid[peak_index]),
+            azimuth_deg=azimuth,
             elevation_deg=self.elevation_deg,
             spectrum=shown,
             scan_grid=np.array(grid, dtype=float, copy=True),
@@ -251,9 +273,9 @@ class MUSICEstimator(SnapshotDOAEstimator):
     algorithm = "music"
 
     def __init__(self, scan_azimuth_deg=None, elevation_deg: float = 0.0,
-                 n_sources: int = 1):
+                 n_sources: int = 1, refine_peak: bool = True):
         super().__init__(scan_azimuth_deg=scan_azimuth_deg,
-                         elevation_deg=elevation_deg)
+                         elevation_deg=elevation_deg, refine_peak=refine_peak)
         self.n_sources = self._validate_n_sources(n_sources)
 
     @staticmethod
@@ -325,9 +347,11 @@ class MUSICEstimator(SnapshotDOAEstimator):
             "raw_spectrum": np.asarray(raw, dtype=float),
             "capabilities": dict(geometry.capabilities),
         })
+        azimuth = self._refined_azimuth(
+            geometry, frequency_hz, projector, peak_index, False, diag)
         return DOAResult(
             algorithm=self.algorithm,
-            azimuth_deg=float(grid[peak_index]),
+            azimuth_deg=azimuth,
             elevation_deg=self.elevation_deg,
             spectrum=shown,
             scan_grid=np.array(grid, dtype=float, copy=True),
@@ -349,9 +373,10 @@ class MVDREstimator(SnapshotDOAEstimator):
     algorithm = "mvdr"
 
     def __init__(self, scan_azimuth_deg=None, elevation_deg: float = 0.0,
-                 loading_rel: float = 10.0 ** (-1.0 - 1.0 - 1.0 - 1.0 - 1.0 - 1.0)):
+                 loading_rel: float = 10.0 ** (-1.0 - 1.0 - 1.0 - 1.0 - 1.0 - 1.0),
+                 refine_peak: bool = True):
         super().__init__(scan_azimuth_deg=scan_azimuth_deg,
-                         elevation_deg=elevation_deg)
+                         elevation_deg=elevation_deg, refine_peak=refine_peak)
         self.loading_rel = self._validate_loading(loading_rel)
 
     @staticmethod
@@ -426,9 +451,11 @@ class MVDREstimator(SnapshotDOAEstimator):
             "raw_spectrum": np.asarray(raw, dtype=float),
             "capabilities": dict(geometry.capabilities),
         }
+        azimuth = self._refined_azimuth(
+            geometry, frequency_hz, np.linalg.inv(loaded), peak_index, False, diag)
         return DOAResult(
             algorithm=self.algorithm,
-            azimuth_deg=float(grid[peak_index]),
+            azimuth_deg=azimuth,
             elevation_deg=self.elevation_deg,
             spectrum=shown,
             scan_grid=np.array(grid, dtype=float, copy=True),
