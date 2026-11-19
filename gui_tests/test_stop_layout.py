@@ -5,6 +5,8 @@ import subprocess
 import sys
 import time
 
+import pytest
+
 os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
 from PySide6.QtCore import Qt, QProcess
 from PySide6.QtTest import QTest
@@ -14,6 +16,13 @@ from PySide6.QtGui import QPixmap, QColor
 from raqs_gui.window import MainWindow, ROOT
 from raqs_gui.structure import StructureDialog
 from raqs_gui.jobs import write_json, read_result
+
+
+# The verified process-tree stop uses Windows Job Objects (raqs_gui.process_job);
+# on other platforms the GUI disables Stop, so these tests cannot run there.
+windows_only = pytest.mark.skipif(
+    sys.platform != 'win32',
+    reason='verified process-tree stop backend is Windows-only')
 
 
 def pump(app, predicate, timeout=15):
@@ -84,6 +93,7 @@ def test_figure_first_fits_the_page_and_focus_reclaims_space(tmp_path):
     w.close()
 
 
+@windows_only
 def test_actual_profile_can_be_stopped_and_is_not_a_completed_run(tmp_path):
     app = QApplication.instance() or QApplication([])
     w = MainWindow(); w.output.setText(str(tmp_path))
@@ -103,6 +113,7 @@ def test_actual_profile_can_be_stopped_and_is_not_a_completed_run(tmp_path):
         w.active = False; w.timer.stop(); w.close()
 
 
+@windows_only
 def test_calculation_does_not_start_when_gui_cannot_own_its_processes(tmp_path, monkeypatch):
     app = QApplication.instance() or QApplication([])
     import raqs_gui.process_job as backend
@@ -119,8 +130,8 @@ def test_calculation_does_not_start_when_gui_cannot_own_its_processes(tmp_path, 
     w.close()
 
 
+@windows_only
 def test_windows_stop_terminates_owned_descendants_only_and_allows_next_run(tmp_path):
-    assert sys.platform == 'win32', 'This test verifies the Windows-only stop backend.'
     from raqs_gui.process_job import ProcessJob
     app = QApplication.instance() or QApplication([])
     unrelated = subprocess.Popen([sys._base_executable, '-c', 'import time; time.sleep(60)'], creationflags=subprocess.CREATE_NO_WINDOW)

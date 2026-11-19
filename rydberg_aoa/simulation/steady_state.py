@@ -40,7 +40,10 @@ from ..physics.lindblad import (
     resolve_effective_transit_rate,
 )
 from ..physics.lindblad.calculate_dephasing_rates import calculate_dephasing_rates
-from ..physics.lindblad.solve_steady_state_direct import solve_steady_state_direct
+from ..physics.lindblad.solve_steady_state_direct import (
+    DetuningAffineSteadyState,
+    solve_steady_state_direct,
+)
 
 
 # Steady-state backend seam (DOP-003S); optionally selected by the spectrum profile.
@@ -79,6 +82,38 @@ def _steady_state_solve(H, c_ops, backend):
         "steady_state_backend must be one of %r, got %r" % (_BACKENDS, backend)
     )
 
+
+
+# Reference solves compared with the affine kernel at every scan point
+# before the kernel is trusted, and the agreement required of them.
+# Module switch for the affine kernel; False forces the reference path for
+# every velocity class (used by the parity tests).
+_FAST_KERNEL_ENABLED = True
+_FAST_PARITY_POINTS = 2
+_FAST_PARITY_TOLERANCE = 1e-12
+
+
+def _fast_parity_check(fast, parity, reference_value, delta_p, delta_c, build_model):
+    """Compare one reference coherence with the affine kernel.
+
+    The reference path stays authoritative: the kernel is built lazily
+    from the SAME model builder, and any build problem or disagreement
+    above ``_FAST_PARITY_TOLERANCE`` disables it for the whole spectrum.
+    Nothing computed by a rejected kernel is ever returned.
+    """
+    try:
+        if fast["kernel"] is None:
+            H0, c_ops0, observable = build_model()
+            fast["kernel"] = DetuningAffineSteadyState(H0, c_ops0, observable)
+        candidate = fast["kernel"].coherence(delta_p, delta_c)
+        agrees = abs(candidate - complex(reference_value)) <= _FAST_PARITY_TOLERANCE
+    except Exception:  # noqa: BLE001 - reference path remains in force
+        agrees = False
+    if agrees:
+        parity["checked"] += 1
+    else:
+        fast["enabled"] = False
+        fast["kernel"] = None
 
 
 def _resolve_transit_rate(transit_rate_per_us=None, transit_enabled=None):
@@ -433,6 +468,13 @@ def simulate_spectrum(
         velocities_ms, class_weights = np.array([0.0]), np.array([1.0])
         lambda_probe_m = lambda_coupling_m = 0.0
 
+    # Affine-detuning kernel state for the adaptive Doppler hot path: only
+    # with the exact "direct" backend and without a Hamiltonian noise seam.
+    _fast = {"enabled": (_FAST_KERNEL_ENABLED and doppler_on and method == "adaptive"
+                         and ss_backend_adaptive == "direct"
+                         and noise_model is None),
+             "kernel": None}
+
     for dp_mhz in detuning_scan_list:
         # Convert MHz scan offset to rad/μs: Δ_scan = 2π · δν[MHz]
         scan_offset_rad = 2 * np.pi * dp_mhz
@@ -458,6 +500,13 @@ def simulate_spectrum(
             # integration (rho21 also depends on probe detuning and RF state,
             # so a global cross-detuning cache would be wrong).
             _rho_cache = {}
+            # Performance kernel (affine-in-detuning Liouvillian).  The first
+            # _FAST_PARITY_POINTS velocities of EVERY scan point are solved
+            # by the reference path and compared with the kernel; the kernel
+            # is used for the remaining velocities of that scan point only
+            # after exact agreement.  Any disagreement or build problem
+            # switches the whole spectrum back to the reference path.
+            _parity = {"checked": 0}
 
             def rho_of_v(v_ms):
                 key = round(float(v_ms), 10)
@@ -467,8 +516,15 @@ def simulate_spectrum(
                     float(v_ms), lambda_probe_m, lambda_coupling_m,
                     counter_propagating=counter,
                 )
+                dp_total = current_delta_p + d_dp_shift
+                dc_total = delta_c + d_dc_shift
+                if (_fast["enabled"] and _fast["kernel"] is not None
+                        and _parity["checked"] >= _FAST_PARITY_POINTS):
+                    val = _fast["kernel"].coherence(dp_total, dc_total)
+                    _rho_cache[key] = val
+                    return val
                 val = _solve_probe_coherence(
-                    current_delta_p + d_dp_shift, delta_c + d_dc_shift,
+                    dp_total, dc_total,
                     omega_p, omega_c, omega_rf, delta_rf,
                     p_gammas, p_dephasing,
                     noise_model=noise_model,
@@ -476,6 +532,14 @@ def simulate_spectrum(
                     steady_state_backend=ss_backend_adaptive,
                     rf_orientation=rf_orientation,
                 )
+                if _fast["enabled"]:
+                    _fast_parity_check(_fast, _parity, val, dp_total, dc_total,
+                                       lambda: create_sensor_model(
+                                           omega_p, omega_c, omega_rf,
+                                           0.0, 0.0, delta_rf,
+                                           p_gammas, p_dephasing,
+                                           transit_rate_per_us=transit_rate,
+                                           rf_orientation=rf_orientation))
                 _rho_cache[key] = val
                 return val
 

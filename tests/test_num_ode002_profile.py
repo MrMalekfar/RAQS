@@ -35,8 +35,11 @@ def test_legacy_profile_has_no_new_solver_keywords():
     assert p.numerics is None and p.run_config.temporal_ode is None
     assert 'numerics' not in profile_document(p)
     r = ode_receipt(None)
-    assert r['source'] == 'legacy_qutip_defaults'
+    # Undeclared runs use fixed RAQS defaults tight enough for the 1e-9
+    # density certification (previously the looser QuTiP defaults).
+    assert r['source'] == 'raqs_certified_defaults'
     assert r['effective']['nsteps'] == 5000 and r['effective']['normalize_output'] is False
+    assert r['effective']['rtol'] == 1e-10 and r['effective']['atol'] == 1e-12
 
 
 @pytest.mark.parametrize('field,value', [('method','adams'),('method',None),('rtol',True),

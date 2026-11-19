@@ -91,7 +91,7 @@ def calculate_dipole_matrix_element(atom, level1: AtomicLevel, n2: int, l2: int,
                                 q_opt = expected_q
                                 count += 1
                             #
-                        except:
+                        except Exception:
                             continue
 
             if count == 0:
@@ -122,7 +122,7 @@ def calculate_dipole_matrix_element(atom, level1: AtomicLevel, n2: int, l2: int,
                         q
                     )
                     dipole = max(dipole, abs(dipole_test))
-                except:
+                except Exception:
                     continue
             logger.debug(f"Hyperfine dipole {level1.n}{level1.l}{level1.j} F={level1.f} -> {n2}{l2}{j2}: {dipole:.2e} ea0")
         else:
@@ -179,7 +179,7 @@ def calculate_dipole_matrix_element(atom, level1: AtomicLevel, n2: int, l2: int,
                             q
                         )
                         dipole = max(dipole, abs(dipole_test))
-                    except:
+                    except Exception:
                         continue
                 logger.debug(f"Regular dipole {level1.n}{level1.l}{level1.j} -> {n2}{l2}{j2}: {dipole:.2e} ea0")
 

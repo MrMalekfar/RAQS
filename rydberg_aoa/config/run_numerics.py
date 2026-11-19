@@ -4,6 +4,30 @@ from .laboratory import _real, _integer
 from ..exceptions import PhysicsConfigurationError
 
 
+# Default temporal controls when a profile declares no numerics.temporal_ode.
+# The density certification (NUM-TD-001) rejects Hermiticity/trace/positivity
+# errors above 1e-9 on states whose populations are of order one, so the
+# integrator's RELATIVE tolerance must be well below 1e-9.  The former QuTiP
+# defaults (rtol=1e-6, atol=1e-8) requested less than the certification
+# demands, and valid runs were rejected sporadically (e.g. a 0.4 V/m signal
+# or a 2 MHz IF in examples/lab006).  A 30-case sweep of signal strength,
+# phase and IF gave 5 rejections at rtol=1e-8/atol=1e-10 and none at the
+# values below (the same values examples/num_ode002 declares), for about
+# 25% more solver time.  They are fixed, recorded in the run report, and
+# never changed after a failure.
+DEFAULT_TEMPORAL_RTOL = 1e-10
+DEFAULT_TEMPORAL_ATOL = 1e-12
+DEFAULT_TEMPORAL_NSTEPS = 5000
+DEFAULT_TEMPORAL_SOURCE = 'raqs_certified_defaults'
+
+
+def default_temporal_options():
+    """Plain QuTiP 5 options dict for the default (undeclared) temporal run."""
+    return {'method': 'bdf', 'nsteps': DEFAULT_TEMPORAL_NSTEPS,
+            'normalize_output': False,
+            'rtol': DEFAULT_TEMPORAL_RTOL, 'atol': DEFAULT_TEMPORAL_ATOL}
+
+
 @dataclass(frozen=True)
 class TemporalODE:
     method: str
@@ -75,11 +99,8 @@ def validate_profile_numerics(profile):
 def ode_receipt(controls, diagnostic=None):
     """Read effective defaults for metadata only; never inject them into a run."""
     if controls is None:
-        from qutip.solver.integrator.scipy_integrator import IntegratorScipyBDF
-        defaults = IntegratorScipyBDF.integrator_options
-        options = dict(method='bdf',nsteps=5000,normalize_output=False,
-                       rtol=defaults['rtol'],atol=defaults['atol'])
-        source = 'legacy_qutip_defaults'
+        options = default_temporal_options()
+        source = DEFAULT_TEMPORAL_SOURCE
     else:
         options, source = controls.options(), 'profile'
     if diagnostic is not None:
@@ -97,5 +118,5 @@ def numerics_capabilities():
             'tolerances':{'minimum_exclusive':0.,'maximum_exclusive':1.,'unit':'dimensionless density matrix'},
             'nsteps':{'minimum':1,'maximum':2**31-1,'unit':'internal steps between output points'},
             'max_order':{'optional':True,'minimum':1,'maximum':5,'scope':'BDF maximum order; omission preserves backend default'},
-            'normalize_output':False,'omission':'preserve legacy QuTiP tolerances and nsteps=5000',
+            'normalize_output':False,'omission':'RAQS certified defaults rtol=1e-10, atol=1e-12, nsteps=5000',
             'automatic_retry':False,'velocity_quadrature_controls_separate':True}

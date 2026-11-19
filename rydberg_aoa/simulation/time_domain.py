@@ -13,6 +13,7 @@ from ..utils.validation import validate_steady_state
 from ..utils.density_validation import validate_density_matrix
 from .noise_seam import apply_noise_seam
 from ..config import parameters as params
+from ..config.run_numerics import default_temporal_options
 
 
 def atomic_if_polarity(rf_orientation):
@@ -214,7 +215,7 @@ def run_single_heterodyne_worker(
         # RAW solver output (QuTiP's default True would hide ODE trace drift).
         # Preserve legacy options unless typed profile controls are declared.
         stage = "mesolve"
-        options = qt.Options(method='bdf', nsteps=5000, normalize_output=False)
+        options = default_temporal_options()
         if temporal_ode is not None:
             options.update(temporal_ode.options())
         certified = [0]
@@ -245,7 +246,7 @@ def run_single_heterodyne_worker(
             certified[0] += 1
             return qt.expect(obs, state)
 
-        result = mesolve(H_t, rho0, tlist, c_ops, [_certified_observable],
+        result = mesolve(H_t, rho0, tlist, c_ops, e_ops=[_certified_observable],
                          options=options)
 
         # NUM-TD-001: the callback must have certified the FULL output grid.

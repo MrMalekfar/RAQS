@@ -24,7 +24,8 @@ def test_actual_profile_cli_saves_all_standalone_figures(tmp_path, mode):
     assert process.returncode == 0, process.stdout + process.stderr
     report = json.loads((tmp_path / 'run' / 'run_report.json').read_text(encoding='utf-8'))
     assert report['mode'] == mode
-    assert report['sensing']['true_aoa_deg'] == report['sensing']['estimated_aoa_deg'] == -30.
+    assert report['sensing']['true_aoa_deg'] == -30.
+    assert abs(report['sensing']['estimated_aoa_deg'] + 30.) < 1e-3  # refined, not grid-snapped
     for name in ('energy_levels', 'fig_time_domain', 'fig_phase_progression', 'fig_aoa_spectrum',
                  'fig_spectrum', 'fig_analytical'):
         assert (tmp_path / 'run' / f'{name}.png').read_bytes().startswith(b'\x89PNG')

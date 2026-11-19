@@ -26,7 +26,8 @@ def test_actual_full_entry_has_spectrum_and_preserves_if_arrays(tmp_path, mode):
     assert report['applied_fields'] == data['fields']
     assert report['mode'] == mode and report['spectrum_computed']
     assert report['doppler_ensemble_included'] and not report['temporal_doppler_ensemble_included']
-    assert report['sensing']['estimated_aoa_deg'] == report['sensing']['true_aoa_deg'] == -30.
+    assert report['sensing']['true_aoa_deg'] == -30.
+    assert abs(report['sensing']['estimated_aoa_deg'] + 30.) < 1e-3  # refined, not grid-snapped
     assert report['detunings_mhz'][1] == pytest.approx(.25, abs=1e-6)
     assert report['resolved_rate_budget_per_us']['pure_dephasing'] == report['sensing']['execution']['dephasing_rates_per_us']
     with np.load(tmp_path / 'run' / 'simulation_arrays.npz', allow_pickle=False) as arrays:

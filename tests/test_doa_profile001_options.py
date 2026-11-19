@@ -159,6 +159,8 @@ def test_real_profile_runner_consumes_options_and_reports_effective_settings(mod
     assert settings['n_sources'] == 1
     assert settings['elevation_deg'] == 0.
     assert len(settings['scan_azimuth_deg']) == 641
-    assert output['estimated_aoa'] == pytest.approx(-30.25, abs=1e-12)
+    # Refined between grid points: no longer snapped to the grid value, so
+    # the simulated atomic phase error (about 2e-9 deg here) is visible.
+    assert output['estimated_aoa'] == pytest.approx(-30.25, abs=1e-6)
     assert np.array_equal(output['angles'], np.linspace(-80., 80., 641))
     json.dumps(report)  # the effective settings must survive the CLI report format

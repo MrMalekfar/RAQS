@@ -55,7 +55,7 @@ def test_two_fresh_qt_jobs_and_cli_equivalence(tmp_path):
     assert sensing_directory != diagnostic_directory
     report, images = read_result(sensing_directory)
     assert len(images) >= 4 and not window.image.pixmap().isNull()
-    assert report['sensing']['estimated_aoa_deg'] == -30.
+    assert abs(report['sensing']['estimated_aoa_deg'] + 30.) < 1e-3  # refined, not grid-snapped
     assert report['applied_fields']['signal']['electric_field_vm'] == .006
     cli_directory = tmp_path / 'cli'
     with (tmp_path / 'cli.log').open('w', encoding='utf-8') as stream:

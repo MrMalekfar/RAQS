@@ -30,7 +30,7 @@ def test_real_arc_spawn_workers_and_beamforming_with_explicit_optical_setpoints(
     assert delay != cfg.transient_delay_us  # Child default must not win.
     runner = SimulationRunner()
     result = runner.run_laboratory_simulation(req, cfg)
-    assert result['estimated_aoa'] == -30.
+    assert abs(result['estimated_aoa'] + 30.) < 1e-3  # refined, not grid-snapped
     assert result['laboratory_runtime'].selection.rf_orientation.direction == -1
     assert abs(ac.DELTA_P) < 1e-6 and abs(ac.DELTA_C) < 1e-6
     assert result['sensor_detunings_rad_per_us'] == ac.get_cached_detunings()
