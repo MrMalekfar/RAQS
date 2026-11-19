@@ -1,50 +1,65 @@
-# آزمون و توسعه
+# Testing and development
 
-از ریشهٔ مخزن و با محیط نصب‌شده از requirements-dev.txt اجرا کنید:
+Run from the repository root in an environment installed from `requirements-dev.txt`.
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest --collect-only -q
 & ./.venv/Scripts/python.exe -m pytest tests/test_lab006_live_entrypoint.py -q -rA -s
 & ./.venv/Scripts/python.exe -m pytest tests -m "not slow" -q -ra
+& ./.venv/Scripts/python.exe -m pytest tests -m slow -q -ra -s
 & ./.venv/Scripts/python.exe -m pytest tests -q -ra
 ```
 
-دو دستور آخر دامنهٔ گسترده و کامل‌اند و ممکن است پرهزینه باشند. not slow فقط marker را حذف می‌کند و تضمین سرعت نیست. collection اجرای آزمون نیست؛ کد خروج صفر با skip نیز به معنی عبور همان مورد نیست.
+Collection discovers tests. Successful execution requires pass/fail/skip results. The `not slow` expression selects markers and does not guarantee a short runtime. Large studies can remain expensive.
 
-## چه چیزی بررسی می‌شود؟
+## Coverage
 
-| نقطهٔ شروع | قرارداد |
+| Entry point | Contract |
 | --- | --- |
-| test_lab006_live_entrypoint.py | subprocess واقعی، ARC، diagnostics و sensing با spawn |
-| test_lab006_run_profile.py، test_lab007_profile_integration.py | schema و ادغام پروفایل |
-| test_arch001*، test_mode001* | مقداردهی صریح، rollback و مرز حالت‌ها |
-| test_c001_rabi_contract.py، test_beam002_radius_contract.py | Rabi، dipole و تعریف شعاع |
-| test_num_td001_density_validation.py، test_num_ode002_profile.py | اعتبار density و تنظیمات حل |
-| test_doa_*، test_if_* | steering، snapshots، covariance و استخراج IF |
-| test_noise*، test_dop*، test_dph* | قرارداد اثرها، مطالعه‌ها و transit |
+| `test_lab006_live_entrypoint.py` | Actual subprocesses, ARC, diagnostics and spawned sensing |
+| `test_lab006_run_profile.py`, `test_lab007_profile_integration.py` | Schema and profile integration |
+| `test_arch001*`, `test_mode001*` | Explicit initialization, rollback and state boundaries |
+| `test_c001_rabi_contract.py`, `test_beam002_radius_contract.py` | Rabi, dipole and beam-radius conventions |
+| `test_num_td001_density_validation.py`, `test_num_ode002_profile.py` | Density certification and solver settings |
+| `test_doa_*`, `test_if_*` | Steering, snapshots, covariance and IF extraction |
+| `test_doa_peak_refinement.py` | Off-grid angle accuracy, diagnostics and pipeline integration |
+| `test_doppler_affine_kernel.py` | Direct-solver parity and reference fallback |
+| `test_linewidth_model_comparison.py` | Linewidth operators, single counting and replay |
+| `test_noise*`, `test_dop*`, `test_dph*` | Effect, study and transit contracts |
 
-fixture اتمی در [conftest.py](conftest.py) opt-in است؛ import جای initialize_atomic_physics را نمی‌گیرد (ARCH-001). atomic_physics مقداردهی واقعی می‌خواهد؛ published_atomic_state فقط برای آزمون مصرف‌کننده با ورودی مصنوعی است و صحت مقداردهی را ثابت نمی‌کند.
+Atomic fixtures in `conftest.py` are opt-in. ARCH-001 keeps imports independent of physical initialization. `atomic_physics` requests real initialization. `published_atomic_state` supplies controlled state to consumer unit tests with synthetic inputs. [Fixtures](conftest.py)
 
-[atomic_init_support.py](atomic_init_support.py) فقط شکست مستند QN-001A در مرز HFS→FS بدون Rydberg mJ صریح را به skip با دلیل BLOCKED تبدیل می‌کند. سایر خطاها باید آشکار بمانند. skip را جدا از pass گزارش کنید.
+`atomic_init_support.py` converts only the documented QN-001A HFS→FS missing-Rydberg-mJ boundary to `BLOCKED` skips. Other errors propagate. Always report skips separately. This suite depends on its versioned profiles and baselines. `outputs/` remains generated evidence. Synthetic and live numerical tests require independent experimental validation before making hardware claims. [Atomic support](atomic_init_support.py)
 
-این مجموعه به کد، پروفایل و baselineهای همین نسخه وابسته است؛ outputs/ ورودی ثابت آن نیست. دادهٔ مصنوعی صحت علمی مدل را ثابت نمی‌کند. آزمون زنده نیز به‌تنهایی اعتبار تجربی یا پوشش همهٔ شرایط کاری را اثبات نمی‌کند.
+## Development entry points
 
-## ورود به توسعه
+The public route is `main.py` → `cli.main` → `load_run_profile` → `execute_profile` or `execute_study`. Read `config/run_profile.py` and parser tests for new inputs, `physics/` and `simulation/` for solving, and `doa/` with `simulation/doa_pipeline.py` for array processing. `run_simulation_with_config` is a legacy helper. [Architecture](../architecture.md)
 
-نقشهٔ مسیر عمومی در [architecture.md](../architecture.md) است: main.py → cli.main → load_run_profile → execute_profile یا execute_study. برای ورودی تازه ابتدا config/run_profile.py و آزمون parser؛ برای حل، physics/ و simulation/؛ برای پردازش آرایه، doa/ و simulation/doa_pipeline.py را بخوانید. وجود run_simulation_with_config قدیمی در cli.py به معنی مسیر عمومی توصیه‌شده نیست.
+Check ordering, trace, Hermiticity, positivity and relevant convergence for solver changes. Preserve sensor order, phase and snapshot/covariance shapes for DoA changes. Run affected behavior and report environmental failures separately. Preserve baseline, seed and acceptance-tolerance contracts. [Development instructions](../AGENTS.md)
 
-[AGENTS.md](../AGENTS.md) قراردادهای واحد، QN-001 و ARCH-001 را مشخص می‌کند. تغییر solver باید ordering، trace، Hermiticity، positivity و همگرایی مرتبط را بررسی کند. تغییر DoA باید ترتیب حسگر، فاز و شکل snapshots/covariance را حفظ کند. آزمون رفتار متأثر را اجرا و تعداد pass/fail/skip و خطای محیطی را جدا گزارش کنید؛ baseline، seed و tolerance ابزار سبزکردن آزمون نیستند.
+## Verified review branches, 2026-11-19
 
-## وضعیت بررسی این بازنویسی
+GitHub Actions ran Python 3.11 core tests on Ubuntu and Windows, with GUI tests on Windows. The reviewed branches contain separate numerical fixes and a dependent linewidth comparison.
 
-بررسی در ۲۰۲۶-۱۱-۰۸ با Windows و Python 3.11.0 در محیط موجود انجام شد. pip check و pip install --dry-run -r requirements-dev.txt موفق بودند؛ نصب از صفر و سیستم‌عامل دیگر بررسی نشد. جمع‌آوری pytest تعداد ۲۷۴۲ مورد را یافت.
+| Revision | Core on each OS | Windows GUI |
+| --- | --- | --- |
+| `faa1341`, numerical fixes | 2724 passed, 0 failed, 82 skipped, 12 slow deselected | 34 passed |
+| `2f8a575`, combined changes | 2728 passed, 0 failed, 82 skipped, 12 slow deselected | 34 passed |
 
-اجرای اولیهٔ آزمون ورودی در sandbox پیش از collection به علت SQLite فقط‌خواندنی ARC متوقف شد؛ این شکست محیطی pass یا skip نیست. اجرای مجدد با capture پیش‌فرض پس از سه موردِ عبورکرده متوقف ماند و قطع شد؛ نتیجهٔ کامل ندارد. اجرای تازه با دسترسی معمول ARC و گزینهٔ -s هر ۵ آزمون زنده را گذراند: ۵ pass، صفر fail و صفر skip. دستور پیشنهادی بالا همین اجرای بررسی‌شده است.
+The 12 slow tests ran separately on local Windows with Python 3.11.0 and QuTiP 5.2.1. Seven passed and five skipped at QN-001A. Pytest also reported four collection skips from obsolete modules, producing a command summary of 7 passed, 9 skipped and 2806 deselected. Those collection skips overlap with CI and must be counted once when combining coverage. [Fixes CI](https://github.com/MrMalekfar/RAQS/actions/runs/44521453340) · [Combined CI](https://github.com/MrMalekfar/RAQS/actions/runs/44521511673)
 
-دستور زیر نیز اجرا شد و ۸۵ pass، صفر fail و صفر skip داشت:
+The local duplicate full-suite run stopped at about 63% after Windows CI completed, with no failure observed up to that point. It has no complete result. An initial sandbox-only targeted run had 73 passes and 12 ARC read-only-database failures. Final verification used writable ARC data. `OPENBLAS_NUM_THREADS=1`, `OMP_NUM_THREADS=1` and `MKL_NUM_THREADS=1` were used for successful local sensing and numerical checks. GUI verification used `QT_QPA_PLATFORM=offscreen`.
+
+The README help, diagnostics and sensing commands completed. Sensing stored `time_traces` with shape `(3, 601)`, `if_snapshots` with shape `(3, 2)` and covariance `(3, 3)`. `pip check` and `git diff --check` succeeded. Both 41-point `lab007` linewidth comparisons were reproduced on Windows at the profile linewidth and 0.5 MHz. Maximum spectral difference from the supplied review data was `1.1e-16`, and IF replay error was zero in all four cases.
+
+## Earlier documentation verification, 2026-11-08
+
+The existing Windows/Python 3.11.0 environment passed `pip check` and a requirements dry run. Pytest collected 2742 tests. Clean installation and other platforms were outside that historical check. A sandbox attempt failed before collection on ARC's read-only SQLite database. Another captured run was interrupted after three passes and has no complete result. Running the five live entry-point tests with writable ARC and `-s` produced 5 passes, 0 failures and 0 skips.
+
+The profile integration selection below produced 85 passes, 0 failures and 0 skips.
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest tests/test_lab006_run_profile.py tests/test_lab007_profile_integration.py -q -ra
 ```
 
-هر دو دستور نمونهٔ README و --help موفق بودند. گزارش sensing مقادیر مورد انتظار را داشت؛ شکل time_traces برابر (3, 601)، if_snapshots برابر (3, 2) و sample_covariance برابر (3, 3) بود. لینک‌های محلی و git diff --check نیز بررسی شدند. کل مجموعه و not slow اجرا نشدند؛ موفقیت این ۹۰ آزمون را به همهٔ ۲۷۴۲ مورد تعمیم ندهید. هشدارهای FutureWarning از QuTiP دیده شد؛ رفتار کتابخانه یا مدل برای رفع آن‌ها تغییر نکرد.
+Both README commands and `--help` succeeded. Array shapes were `(3, 601)`, `(3, 2)` and `(3, 3)`. Local links and whitespace were checked. The full suite and `not slow` selection were outside that historical 90-test verification. QuTiP FutureWarnings were recorded at that time.

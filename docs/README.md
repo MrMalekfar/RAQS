@@ -1,41 +1,50 @@
-# راهنمای پژوهشی
+# Research guide
 
-[شروع](../README.md) · [اجرا و خروجی](usage.md) · [مثال‌ها](../examples/README.md) · [آزمون‌ها](../tests/README.md) · [معماری](../architecture.md)
+[Getting started](../README.md) · [Execution and outputs](usage.md) · [Examples](../examples/README.md) · [Tests](../tests/README.md) · [Architecture](../architecture.md)
 
-The English [Research Workbench guide](gui.md), [architecture and roadmap](gui-plan.md), and [verification report](gui-verification.md) describe the implemented desktop workflow and its explicit limits.
+The [Research Workbench guide](gui.md), [architecture and roadmap](gui-plan.md), and [verification report](gui-verification.md) describe the desktop workflow and its limits. Historical audit records retain the commits, dates and measured results of their original reviews.
 
-## مدل و مرز تفسیر
+## Model and interpretation
 
-تابع create_sensor_model در [Hamiltonian](../rydberg_aoa/physics/hamiltonian/create_sensor_model.py) مدل چهارترازی ground → excited → rydberg1 ↔ rydberg2 را در RWA و با ℏ=1 می‌سازد. حل Lindblad و تبدیل coherence پروب به transmission ورودی پردازش IF را فراهم می‌کند. مدل معمول یک کانال مغناطیسی آماده‌شده را فرض می‌کند؛ توزیع جمعیت همهٔ زیرترازها را از فرایند آماده‌سازی پیش‌بینی نمی‌کند.
+`create_sensor_model` builds the four-level ground → excited → rydberg1 ↔ rydberg2 model in the rotating-wave approximation with ℏ=1. Lindblad evolution and conversion of probe coherence to transmission feed IF processing. The ordinary model assumes a prepared magnetic channel. Sublevel populations produced by preparation require a separate model. [Hamiltonian source](../rydberg_aoa/physics/hamiltonian/create_sensor_model.py)
 
-قرارداد QN-001 در [laboratory.py](../rydberg_aoa/config/laboratory.py) و [prepared_channel.py](../rydberg_aoa/arc/prepared_channel.py)، حالت HFS با F/mF و FS با j/mJ را جدا نگه می‌دارد. mF را نمی‌توان جای mJ گذاشت. قطبش کروی q و محور کوانتش صریح‌اند؛ کانال با اسکن mJ برای بزرگ‌کردن dipole انتخاب نمی‌شود. fs_centroid قرارداد انرژی اپتیکی نمونهٔ آغازین است؛ برچسب HFS به‌تنهایی به معنی لحاظ تمام جابه‌جایی‌های HFS در انرژی نیست.
+QN-001 distinguishes HFS states labeled by F/mF from FS states labeled by j/mJ. Spherical polarization q and the quantization axis are explicit. The declared channel determines the dipole. `fs_centroid` is the optical energy convention of the starting example. An HFS label alone does not establish inclusion of every hyperfine energy shift. [Laboratory contract](../rydberg_aoa/config/laboratory.py) · [Prepared channel](../rydberg_aoa/arc/prepared_channel.py)
 
-ARC انرژی، dipole و نرخ را تأمین می‌کند. [atom_species.py](../rydberg_aoa/config/atom_species.py) گونه‌های Rb85، Rb87 و Cs133 را می‌شناسد؛ نبود بلوک atom به Rb85 خالص می‌رسد. isotope_fraction مدل دینامیکی مخلوط نیست. مدل برخورد برای همهٔ گونه‌ها قابل تعمیم فرض نشده است. شکست ARC یا کانال نامعتبر باید خطا بماند.
+ARC supplies energies, dipoles and rates. Rb85, Rb87 and Cs133 are recognized. Omitting `atom` selects pure Rb85. `isotope_fraction` is a declared fraction, without dynamical isotope-mixture evolution. The collision approximation has species-specific limits. ARC failures and invalid channels propagate explicitly. [Species configuration](../rydberg_aoa/config/atom_species.py)
 
-مدل نرخ پیش‌فرض در decay_rate_basis مشخص است و branching مغناطیسی کامل نیست. مدل اختیاری selected_internal_spontaneous_e1 در [profile_radiative.py](../rydberg_aoa/config/profile_radiative.py) گراف داخلی E1 را جایگزین می‌کند؛ بازگشت از تمام فضای خارج مدل را حل نمی‌کند. تابع execute_profile در [profile_execution.py](../rydberg_aoa/simulation/profile_execution.py) sensing عمومی magnetic core را رد می‌کند؛ diagnostics می‌تواند زیرمسیر زمانی تخصصی درخواست‌شده را اجرا کند. بنابراین diagnostics همیشه کم‌هزینه یا صرفاً خواندن JSON نیست.
+`decay_rate_basis` records the default rate model. The optional `selected_internal_spontaneous_e1` model replaces the selected internal E1 graph. Population return through all omitted electronic states requires additional modeling. Public magnetic-core sensing is rejected by `execute_profile`. Diagnostics can run a requested specialized temporal path and may be computationally expensive. [Radiative model](../rydberg_aoa/config/profile_radiative.py) · [Profile execution](../rydberg_aoa/simulation/profile_execution.py)
 
-## واحدها و قراردادها
+## Units and conventions
 
-| کمیت | قرارداد |
+| Quantity | Convention |
 | --- | --- |
-| زمان | µs؛ duration_us و tlist |
-| RF ورودی، طول‌موج لیزر | Hz و nm |
-| offset لیزر و IF | MHz چرخه‌ای؛ IF = (signal − LO)/10⁶ با علامت |
-| Rabi و detuning حل | rad/µs؛ تبدیل Hz برابر 2πf/10⁶ |
-| نرخ رویداد، واپاشی و transit | µs⁻¹؛ تبدیل s⁻¹ فقط تقسیم بر 10⁶ |
-| توان، میدان، فاصله | mW، V/m، و m برای موقعیت حسگر و طول سلول |
-| beam_waist_mm | شعاع شدت Gaussian در 1/e² بر حسب mm؛ قطر FWHM نیست |
+| Time | µs for `duration_us` and `tlist` |
+| Input RF frequency and laser wavelength | Hz and nm |
+| Laser offset and IF | Cyclic MHz, with signed IF = (signal − LO)/10⁶ |
+| Solver Rabi frequency and detuning | rad/µs, converted from Hz as 2πf/10⁶ |
+| Event, decay and transit rates | µs⁻¹, converted from s⁻¹ by division by 10⁶ |
+| Power, field and distance | mW, V/m and m for sensor positions and cell length |
+| `beam_waist_mm` | Gaussian 1/e² intensity radius in mm |
 
-واحد هر تابع را مستقل بررسی کنید؛ linewidth زاویه‌ای با نرخ رویداد یکی نیست. transit در [collapse operators](../rydberg_aoa/physics/lindblad/create_transit_reset_collapse_ops.py) بازنشانی جمعیت/همدوسی است و نباید دوباره به pure dephasing افزوده شود. جهت انرژی RF، علامت detuning و ضریب 1/2 Hamiltonian را از نام ترازها حدس نزنید؛ rf_orientation جهت را ثبت می‌کند.
+Check each function independently. Angular linewidth and event rate have distinct conversion rules. Transit resets populations and coherences through dedicated collapse operators and must remain separate from pure dephasing. Read `rf_orientation` for RF energy direction and preserve the declared detuning signs and Hamiltonian factor of 1/2. [Transit operators](../rydberg_aoa/physics/lindblad/create_transit_reset_collapse_ops.py)
 
-در [steering.py](../rydberg_aoa/doa/steering.py)، azimuth از +y به سمت +x است و جهت افقی (sin az, cos az, 0) است. فاز ورود k·r و steering برابر exp(-j k·r) است. snapshots شکل (تعداد حسگر، تعداد پنجره) دارند؛ ترتیب ردیف‌ها باید با positions_m یکسان باشد. [snapshots.py](../rydberg_aoa/doa/snapshots.py) پنجرهٔ انتهایی ناقص را کنار می‌گذارد؛ طول پنجره از قدرمطلق IF و projection از علامت آن استفاده می‌کند. برای ESPRIT و Root-MUSIC قیود ULA را بررسی کنید. پروفایل عمومی یک منبع RF با elevation صفر را مدل می‌کند؛ چند تخمین‌گر به معنی پشتیبانی از چند منبع در این pipeline نیست (config/doa_options.py).
+Azimuth runs from +y toward +x, with horizontal direction `(sin az, cos az, 0)`. Arrival phase is k·r and steering is exp(-j k·r). Snapshot matrices have shape `(sensors, windows)` and rows follow `positions_m`. The final incomplete window is discarded. Window length uses |IF| and projection retains its sign. ESPRIT and Root-MUSIC require compatible ULA geometry. The public pipeline models one RF source at zero elevation. Grid estimators refine a stationary point between neighboring scan angles and retain `grid_azimuth_deg` in diagnostics. [Steering](../rydberg_aoa/doa/steering.py) · [Snapshots](../rydberg_aoa/doa/snapshots.py) · [Profile options](../rydberg_aoa/config/doa_options.py)
 
-## اثرها و بازتولیدپذیری
+## Effects and reproducibility
 
-وجود دما یا بلوک noise اثبات اجرای همهٔ اثرها نیست. Doppler طیفی و زمانی جدا هستند؛ doppler_ensemble_included و temporal_doppler_ensemble_included را مستقل بخوانید. نویز readout، PIN، RF drive، laser frequency و RIN مسیرهای مختلف دارند؛ noise_status و receipt اجرای واقعی تعیین‌کننده‌اند. طیف مرجع الزاماً نویز زمانی همان trial را ندارد.
+Spectral and temporal Doppler are independent. Inspect `doppler_ensemble_included` and `temporal_doppler_ensemble_included` separately. In `lab006`, IF/DoA has no Doppler averaging. In `lab007`, the stationary spectrum includes Doppler while IF/DoA does not. Readout, PIN, RF drive, laser-frequency noise and RIN have separate execution paths. `noise_status` and execution receipts record what actually ran. A reference spectrum can differ in noise content from a temporal trial.
 
-برای هر نتیجه پروفایل، commit و diff محلی، نسخهٔ Python و بسته‌ها، گونه/نسخهٔ ARC و منشأ داده‌های اتمی، seed و noise_random_plan، تنظیمات solver، شبکهٔ زمانی/سرعت و تعداد trial را نگه دارید. خروجی تک‌پروفایل همهٔ این اطلاعات را خودکار بایگانی نمی‌کند. seed ثابت جای بررسی همگرایی و تکرار آماری را نمی‌گیرد؛ تطابق کامل بین پلتفرم‌ها تضمین نشده است.
+Undeclared temporal ODE controls use `rtol=1e-10`, `atol=1e-12`, `nsteps=5000`, with output normalization disabled. Explicit controls take precedence. Density certification thresholds remain independent of solver error requests. Numerical convergence still requires refinement studies.
 
-outputs/ حاصل اجرای تازه و خارج از Git است؛ آن را ورودی ثابت آزمون نکنید. fixture مرجع باید منشأ، نسخه، واحد و hash داشته باشد. دو baseline ریشه قرارداد رگرسیون‌اند و نباید برای رفع شکست بازنویسی شوند. manifest نمونه‌های ادبیات دامنهٔ مقایسه را تعیین می‌کند؛ نام مقاله اثبات بازتولید آزمایش نیست.
+The main four-level pipeline uses the existing per-level linewidth budget. The independent comparison script evaluates field phase diffusion through `create_laser_phase_diffusion_ops`, removing optical linewidth from the per-level budget first. The reported comparison covers two `lab007` profiles at 1 kHz and 0.5 MHz. Its IF calculation excludes temporal Doppler and physical readout. Identify the actual thesis profiles before extending those conclusions. [Linewidth comparison](LINEWIDTH-MODEL-COMPARISON-2026-11-17.md)
 
-ارزیابی تجربی، optical pumping عمومی و گیرندهٔ کامل چندترازی کار مستقل آینده‌اند؛ این مستندات برای آن‌ها ادعای قابلیت موجود یا زمان‌بندی ندارد.
+For every result retain the profile, commit and local diff, Python/package versions, ARC species/version and atomic-data provenance, seeds and `noise_random_plan`, solver settings, time/velocity grids and trial count. Single-profile receipts archive input/artifact hashes, available Git information and major dependency versions. They do not archive the entire ARC database or lock all transitive dependencies. Fixed seeds support replay. Convergence and statistical replication require independent checks.
+
+`outputs/` contains fresh results outside Git. Reference fixtures require provenance, version, units and a hash. Preserve both root regression baselines. Literature manifests define the comparison scope. Experimental validation, general optical pumping and a complete multilevel receiver remain separate research tasks.
+
+## Review records
+
+- [2026-11-12 audit and remediation](AUDIT-2026-11-12.md) records initial findings and their follow-up acceptance.
+- [2026-11-17 external review](REVIEW-2026-11-17.md) describes the numerical fixes and historical measurements.
+- [Laser linewidth comparison](LINEWIDTH-MODEL-COMPARISON-2026-11-17.md) records model definitions, data and limits.
+- [Current test evidence](../tests/README.md#verified-review-branches-2026-11-19) records actual Windows/Linux CI and local slow-test results.

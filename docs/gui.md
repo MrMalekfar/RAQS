@@ -1,20 +1,39 @@
 # RAQS Research Workbench
 
-The workbench is a local English-language PySide6 desktop interface over the existing RAQS profile and simulation APIs. It improves configuration, execution visibility and measurement review without changing the physical model, units, baselines, seeds or solver tolerances.
+The workbench is a local English-language PySide6 desktop interface over the RAQS profile and simulation APIs. It supports configuration, execution monitoring and measurement review. The core retains responsibility for physical models, units, baselines, seeds and numerical controls.
 
-## Install and launch
+## Installing and running on Windows
 
-On Windows, double-click **Launch RAQS GUI.cmd** in the project folder after the initial setup. The launcher uses the project's `.venv` and keeps its console open if startup fails so you can read the error.
+1. Extract the entire repository ZIP to a writable folder.
+2. Install 64-bit Python 3.11 with Python Launcher enabled. [Python for Windows](https://www.python.org/downloads/release/python-3119/)
+3. Double-click **Launch RAQS GUI.cmd**. It creates `.venv`, installs `requirements-gui.txt` and opens the application. The first launch downloads packages and may take several minutes.
 
-From the repository root, using the project Python environment:
+If installation fails, the console stays open with the error. Correct the issue and run the launcher again. If the error identifies a damaged environment or incompatible Python version, rename `.venv` and let the launcher create a fresh environment.
+
+For manual installation, run these commands from the repository root. If the environment already exists, start with dependency installation.
 
 ```powershell
+py -3.11 -m venv .venv
 & ./.venv/Scripts/python.exe -m pip install -r requirements-gui.txt
 & ./.venv/Scripts/python.exe -m pip check
 & ./.venv/Scripts/python.exe -m raqs_gui
 ```
 
-The optional GUI requirements use PySide6-Essentials 6.10.3. CLI-only installations do not need Qt. The application still runs from this checkout; no standalone installer is provided.
+GUI dependencies include PySide6-Essentials 6.10.3. CLI execution requires `requirements.txt`. The source launcher uses Python installed on Windows.
+
+## Building and testing the installer
+
+On GitHub, select **Actions → Windows installer → Run workflow**. Pushing a tag such as `v1.0.0` also starts a versioned build. The workflow bundles RAQS, Python 3.11 and GUI dependencies for Windows x64. It installs the result in a test directory, checks the Start menu shortcut and uses the bundled interpreter to run a sample GUI calculation.
+
+After a successful run, download `RAQS-Setup.exe` from the **RAQS-Windows-x64** artifact. Tag-triggered runs also place it in release **Assets**. Installation is per user and creates a **RAQS Research Workbench** Start menu shortcut. The default result location is **RAQS Results** under the user's Documents folder.
+
+For a local build, use Windows x64 with Python 3.11, Git and Inno Setup 6.3 or later. The build requires access to Python package repositories.
+
+```powershell
+py -3.11 packaging/windows/build_installer.py 1.0.0
+```
+
+The installer is written to `outputs/windows-installer/RAQS-Setup.exe`. This workflow produces an unsigned executable. Package license notices and Qt/PySide6 source links are included with the installer.
 
 ## First complete workflow
 
@@ -81,7 +100,7 @@ GUI tests require Qt explicitly; a missing optional GUI installation is not sile
 
 ## Limits
 
-This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, standalone packaging, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Other operating systems have not been certified.
+This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Core tests also run on Linux in CI. Desktop process-tree stopping remains verified on Windows.
 
 Advanced Structure uses clearly bordered in-cell editors with explicit row height; click a scalar value or use F2. Editing preserves numeric text/scientific notation until the core parser validates the resulting profile. The large application heading has been removed; the operating-system window title identifies the application. Use the section list to navigate the form and enable JSON preview when needed. A failed Import or Reload leaves the current draft intact. Advanced Structure keeps the dialog open when validation rejects the edited document. Presets are read when requested.
 
