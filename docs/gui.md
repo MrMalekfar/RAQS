@@ -1,16 +1,16 @@
 # RAQS Research Workbench
 
-The workbench is a local English-language PySide6 desktop interface over the existing RAQS profile and simulation APIs. It improves configuration, execution visibility and measurement review without changing the physical model, units, baselines, seeds or solver tolerances.
+The workbench is a local English-language PySide6 desktop interface over the RAQS profile and simulation APIs. It supports configuration, execution monitoring and measurement review. The core retains responsibility for physical models, units, baselines, seeds and numerical controls.
 
-## نصب و اجرا در ویندوز
+## Installing and running on Windows
 
-1. فایل ZIP مخزن را در پوشه‌ای که اجازهٔ نوشتن در آن دارید کامل استخراج کنید.
-2. اگر Python 3.11 نسخهٔ ۶۴ بیتی را ندارید، آن را نصب کنید و گزینهٔ Python Launcher را فعال بگذارید. [دریافت Python برای ویندوز](https://www.python.org/downloads/release/python-3119/)
-3. در پوشهٔ استخراج‌شده روی **Launch RAQS GUI.cmd** دوبار کلیک کنید. لانچر `.venv` را می‌سازد، وابستگی‌های `requirements-gui.txt` را در آن نصب می‌کند و رابط را باز می‌کند. اجرای اول برای دانلود بسته‌ها به اینترنت نیاز دارد و ممکن است چند دقیقه طول بکشد.
+1. Extract the entire repository ZIP to a writable folder.
+2. Install 64-bit Python 3.11 with Python Launcher enabled. [Python for Windows](https://www.python.org/downloads/release/python-3119/)
+3. Double-click **Launch RAQS GUI.cmd**. It creates `.venv`, installs `requirements-gui.txt` and opens the application. The first launch downloads packages and may take several minutes.
 
-اگر نصب بسته‌ها خطا داد، پنجره باز می‌ماند تا پیام را بخوانید. پس از رفع خطا همان فایل را دوباره اجرا کنید. اگر پیام خطا به نسخه یا خرابی `.venv` اشاره کرد، نام آن پوشه را عوض کنید و دوباره لانچر را اجرا کنید تا محیط تازه‌ای بسازد.
+If installation fails, the console stays open with the error. Correct the issue and run the launcher again. If the error identifies a damaged environment or incompatible Python version, rename `.venv` and let the launcher create a fresh environment.
 
-برای نصب و اجرا از PowerShell، دستورهای زیر را در ریشهٔ مخزن اجرا کنید. اگر `.venv` را از قبل ساخته‌اید، از دستور دوم شروع کنید.
+For manual installation, run these commands from the repository root. If the environment already exists, start with dependency installation.
 
 ```powershell
 py -3.11 -m venv .venv
@@ -19,21 +19,21 @@ py -3.11 -m venv .venv
 & ./.venv/Scripts/python.exe -m raqs_gui
 ```
 
-وابستگی‌های رابط گرافیکی شامل PySide6-Essentials 6.10.3 هستند. برای اجرای خط فرمان، `requirements.txt` کافی است. اجرای لانچر به Python نصب‌شده روی ویندوز نیاز دارد.
+GUI dependencies include PySide6-Essentials 6.10.3. CLI execution requires `requirements.txt`. The source launcher uses Python installed on Windows.
 
-## ساخت و آزمون نصب‌کننده
+## Building and testing the installer
 
-در GitHub به **Actions → Windows installer → Run workflow** بروید. ارسال تگی مانند `v1.0.0` هم ساخت همان نسخه را شروع می‌کند. گردش‌کار روی ویندوز x64، Python 3.11 و وابستگی‌های رابط را همراه با RAQS بسته‌بندی می‌کند. سپس فایل نصب را در یک پوشهٔ آزمایشی اجرا می‌کند، میانبر منوی Start را می‌سنجد و با Python همراه برنامه یک محاسبهٔ نمونه را از رابط گرافیکی اجرا می‌کند.
+On GitHub, select **Actions → Windows installer → Run workflow**. Pushing a tag such as `v1.0.0` also starts a versioned build. The workflow bundles RAQS, Python 3.11 and GUI dependencies for Windows x64. It installs the result in a test directory, checks the Start menu shortcut and uses the bundled interpreter to run a sample GUI calculation.
 
-بعد از موفقیت آزمون، فایل `RAQS-Setup.exe` از بخش **Artifacts** همان اجرا، داخل بستهٔ **RAQS-Windows-x64**، در دسترس است. اجرای ناشی از تگ، همان فایل را در **Assets** انتشار می‌گذارد. نصب‌کننده برای حساب فعلی نصب می‌شود و یک میانبر به نام **RAQS Research Workbench** در منوی Start می‌سازد. مسیر پیش‌فرض نتایج در پوشهٔ Documents کاربر، زیر **RAQS Results**، است.
+After a successful run, download `RAQS-Setup.exe` from the **RAQS-Windows-x64** artifact. Tag-triggered runs also place it in release **Assets**. Installation is per user and creates a **RAQS Research Workbench** Start menu shortcut. The default result location is **RAQS Results** under the user's Documents folder.
 
-برای ساخت محلی، در ویندوز x64 با Python 3.11، Git و Inno Setup 6.3 یا بالاتر، دستور زیر را از ریشهٔ مخزن اجرا کنید. دسترسی به مخزن بسته‌های Python برای مرحلهٔ ساخت لازم است.
+For a local build, use Windows x64 with Python 3.11, Git and Inno Setup 6.3 or later. The build requires access to Python package repositories.
 
 ```powershell
 py -3.11 packaging/windows/build_installer.py 1.0.0
 ```
 
-خروجی در `outputs/windows-installer/RAQS-Setup.exe` قرار می‌گیرد. فایل تولیدشده در این گردش‌کار امضای دیجیتال ندارد. متن مجوزهای بسته‌ها و پیوند سورس Qt و PySide6 همراه نصب‌کننده در دسترس است.
+The installer is written to `outputs/windows-installer/RAQS-Setup.exe`. This workflow produces an unsigned executable. Package license notices and Qt/PySide6 source links are included with the installer.
 
 ## First complete workflow
 
@@ -100,7 +100,7 @@ GUI tests require Qt explicitly; a missing optional GUI installation is not sile
 
 ## Limits
 
-This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, standalone packaging, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Other operating systems have not been certified.
+This is a research workbench, not experimental validation or a guarantee of arbitrary-profile convergence. Study/magnetic-core execution, graceful solver cancellation, non-Windows process-tree stopping, multiuser service, exhaustive DPI/accessibility verification and interactive numerical plotting remain outside the implemented scope. Core tests also run on Linux in CI. Desktop process-tree stopping remains verified on Windows.
 
 Advanced Structure uses clearly bordered in-cell editors with explicit row height; click a scalar value or use F2. Editing preserves numeric text/scientific notation until the core parser validates the resulting profile. The large application heading has been removed; the operating-system window title identifies the application. Use the section list to navigate the form and enable JSON preview when needed. A failed Import or Reload leaves the current draft intact. Advanced Structure keeps the dialog open when validation rejects the edited document. Presets are read when requested.
 

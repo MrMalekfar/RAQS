@@ -5,12 +5,12 @@ RAQS is research software for simulating Rydberg atomic sensing, heterodyne IF m
 ## Confirmed product constraints
 
 - Local desktop application, initially verified on Windows; PySide6 / Qt Widgets remains the UI platform.
-- English interface and GUI documentation. Existing scientific and project documents retain their own scope.
+- English interface, README files and project documentation. Historical scientific records retain their stated study scope and provenance.
 - The canonical profile parser and physics APIs own scientific validation. Qt is optional and never imported by the core or CLI.
 - Inputs may be created from explicit example templates or imported from JSON. Unsaved drafts, current execution snapshots and saved results are distinct.
 - Ordinary AoA and IF-only calculations use a fresh Python process for each job. This is numerical research software, not experimental certification.
 - Study and magnetic-core documents can be edited, but their execution is explicitly unavailable in this GUI. No implicit fallback model is allowed.
-- Windows offers an explicit forced Stop with verified owned-process cleanup. Graceful solver cancellation, non-Windows stopping, installer, web service and multiuser operation are not claimed.
+- Windows offers forced Stop with verified owned-process cleanup. A Windows x64 installer build/test workflow is available. Graceful solver cancellation, non-Windows stopping, web service and multiuser operation require separate implementation and validation.
 
 ## Success criteria
 

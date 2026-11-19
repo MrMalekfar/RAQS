@@ -28,12 +28,12 @@ Ordinary AoA and IF-only profiles use execute_profile in an independent process.
 
 Opening and verifying saved artifacts happens outside the UI thread. A generation token prevents a late read from replacing results after the input changes. Scientific image zoom/export does not recompute data. Missing curves, unavailable angles and unexecuted effects are not fabricated.
 
-## Remaining work, not current capabilities
+## Remaining work
 
 - Study and magnetic-core execution require explicit routing and measurement-specific result review; until then they remain visibly unavailable in this GUI.
 - Windows forced Stop is implemented and tested with descendants and an unrelated process. Graceful solver/study cancellation and non-Windows stopping remain separate work.
-- A standalone Windows package requires a separate ARC data, spawn, font and clean-machine validation pass.
+- The Windows installer workflow now bundles Python/GUI dependencies and runs an installed-app smoke check. Broader clean-machine, ARC-data, spawn and font validation requires its own evidence. See the [installer guide](gui.md#building-and-testing-the-installer).
 - Numerical interactive plots may be added using saved arrays, independently of solver execution. Current figure zoom is image navigation only, with Fit Page and a focus mode.
-- Exhaustive native keyboard/pointer, assistive-technology and Windows scaling verification remain release gates. Other operating systems require independent validation.
+- Exhaustive native keyboard/pointer, assistive-technology and Windows scaling verification remain release gates. Core CI covers Windows and Linux. Desktop validation on other operating systems remains separate.
 
 Do not add a web service, plugin framework, schema abstraction or new dependency until a concrete requirement justifies it. Adding a model input starts with its core parser/tests; the GUI then adds labels, units, controls and result presentation for the supported contract.

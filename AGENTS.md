@@ -1,15 +1,15 @@
-# راهنمای توسعهٔ نسخهٔ انتشار
+# Release development guide
 
-پاسخ و مستندات آموزشی را فارسی بنویسید. پیش از تغییر، وضعیت Git و source مرتبط را بررسی کنید و تغییرهای موجود کاربر را حفظ کنید. کوچک‌ترین تغییر کامل و مرتبط را انجام دهید؛ مدل، baseline، seed یا tolerance را برای سبز شدن آزمون تغییر ندهید.
+Write documentation in English and respond in the user's requested language. Preserve imported Chapter 3 research documentation in Persian. Before editing, inspect Git status and the relevant source. Preserve the user's existing changes. Make the smallest complete, relevant change. Keep the model, baselines, seeds and acceptance tolerances fixed when diagnosing test failures.
 
-مسیر اصلی `main.py`، `cli.py` و `rydberg_aoa/` است. آزمون‌های فعال در `tests/` و پروفایل‌ها در `examples/` هستند. برای ساختار از Codebase Memory، در صورت دسترسی، و برای اثبات رفتار از source/config/test استفاده کنید. این مخزن شامل آرشیو پژوهشی و ورودی‌های پایان‌نامه نیست.
+The main entry points are `main.py`, `cli.py` and `rydberg_aoa/`. Active tests are in `tests/` and profiles in `examples/`. Use Codebase Memory for structure when available, and source/configuration/tests for behavioral evidence. This repository excludes the research archive and thesis inputs.
 
-واحد هر تابع را مستقلاً بررسی کنید: زمان معمولاً µs، detuning و Rabi بر حسب rad/µs، و نرخ رویداد بر حسب µs⁻¹ است. برای Hz به rad/µs از `2πf/10⁶` استفاده می‌شود؛ برای نرخ رویداد s⁻¹ فقط تقسیم بر ۱۰⁶ انجام می‌شود. ترتیب پایه، علامت detuning، فاز، جهت انتشار و ضریب ۱/۲ را بدون استدلال و آزمون تغییر ندهید. transit reset را دوباره به pure dephasing اضافه نکنید.
+Check each function's units independently. Time is usually µs, detuning and Rabi frequency rad/µs, and event rates µs⁻¹. Convert Hz to rad/µs with `2πf/10⁶`. Convert event rates from s⁻¹ by dividing by 10⁶. Preserve basis ordering, detuning signs, phase, propagation direction and the factor of 1/2 unless justified and tested. Keep transit reset separate from pure dephasing.
 
-قرارداد ARCH-001 را حفظ کنید: import جای مقداردهی صریح فیزیک نیست. شکست ARC یا پیکربندی را به مقدار ساختگی، گذار دیگر یا موفقیت تبدیل نکنید. قرارداد QN-001، وضعیت‌های F/mF و j/mJ و polarization اعلام‌شده را حفظ کنید؛ mF را mJ فرض نکنید و برای بیشینه‌کردن dipole کانال را اسکن نکنید. برای ARC، discovery از Context7 ممکن است کمک کند؛ API مبهم را با سورس رسمی ARC تطبیق دهید.
+Preserve ARCH-001. Imports must leave physical initialization explicit. ARC and configuration failures must propagate. Preserve QN-001, the declared F/mF and j/mJ states, and polarization. Keep mF and mJ distinct. Channel selection must respect the declaration without scanning for the largest dipole. Context7 discovery may help with ARC. Verify ambiguous APIs against official ARC source.
 
-تغییر solver باید ordering، trace، Hermiticity، positivity و همگرایی مرتبط را بررسی کند. در DoA، ترتیب حسگر، steering، فاز، شکل snapshots و covariance باید با pipeline سازگار بماند. fixture اتمی باید صریح بماند؛ skip فقط در مرز مستند QN-001A مجاز است و PASS نیست.
+Solver changes require checks of ordering, trace, Hermiticity, positivity and relevant convergence. In DoA, keep sensor ordering, steering, phase, snapshot shapes and covariance consistent with the pipeline. Atomic fixtures must remain explicit. A skip is permitted only at the documented QN-001A boundary and must be reported separately from PASS.
 
-`outputs/` نتیجهٔ اجرای تازه است؛ از آن به‌عنوان ورودی ثابت برنامه یا آزمون استفاده نکنید. fixture مرجع باید منشأ، نسخه، واحد و hash مشخص داشته باشد. وابستگی جدید را فقط برای نیاز واقعی اضافه کنید؛ `requirements.txt` برای اجرا و `requirements-dev.txt` برای آزمون است.
+`outputs/` contains fresh run results. Program and test inputs must come from declared profiles or fixtures. Reference fixtures require provenance, version, units and a hash. Add dependencies only for a concrete need. Runtime dependencies belong in `requirements.txt` and test dependencies in `requirements-dev.txt`.
 
-پس از تغییر، آزمون نزدیک به رفتار متأثر را اجرا کنید و diff/whitespace را بررسی کنید. دستورهای نمونه در README هستند و اجرای موفقشان باید جداگانه احراز شود. هنگام تحویل، تغییر، دلیل، آزمون‌های واقعاً اجراشده، تعداد pass/fail/skip و محدودیت باقی‌مانده را گزارش کنید. ادعای پیاده‌سازی را به مسیر و تابع وصل کنید؛ پیشنهاد آینده را قابلیت موجود معرفی نکنید.
+After editing, run tests close to the affected behavior and check the diff and whitespace. README example commands require separate execution verification. Report the change, reason, tests actually run, pass/fail/skip counts and remaining limitations. Connect implementation claims to a path and function. Label future proposals clearly.

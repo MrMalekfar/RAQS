@@ -1,67 +1,66 @@
-# اجرای پروفایل و تفسیر خروجی
+# Running profiles and interpreting outputs
 
-## انتخاب و اجرای معتبر
+## Selecting and executing a profile
 
-main.py و cli.py به cli.main می‌رسند. --profile الزامی است؛ بدون آن fallback قدیمی وجود ندارد. با وجود نمایش گزینه‌های قدیمی --n-elements، --target-aoa، --rf-frequency، --lo-rf-frequency، --spacing و --cell-length در help، ترکیب آن‌ها با پروفایل رد می‌شود. ورودی را در یک کپی از JSON ویرایش کنید.
+`main.py` and `cli.py` call `cli.main`. `--profile` is required. Legacy switches such as `--n-elements`, `--target-aoa`, `--rf-frequency`, `--lo-rf-frequency`, `--spacing` and `--cell-length` remain visible in help, but combining them with a profile is rejected. Edit a copy of the input JSON.
 
-تابع load_run_profile در [run_profile.py](../rydberg_aoa/config/run_profile.py) schema را سخت‌گیرانه می‌خواند؛ کلید ناشناخته، تکراری، مقدار غیرمتناهی یا declaration ناقص پذیرفته نمی‌شود. نسخهٔ 1 برای prescribed فقط diagnostics و برای experimental اجرای sensing دارد. نسخهٔ 2 environment، spectrum و execution صریح را اضافه می‌کند و prescribed sensing را نیز می‌پذیرد. spectrum می‌تواند null باشد؛ محیط حرارتی به‌تنهایی Doppler زمانی را فعال نمی‌کند.
+`load_run_profile` strictly validates schema keys, duplicate keys, finite values and complete declarations. Schema 1 supports prescribed diagnostics and experimental sensing. Schema 2 adds explicit `environment`, `spectrum` and `execution`, including prescribed sensing. `spectrum` may be null. A thermal environment alone leaves temporal Doppler disabled. [Profile parser](../rydberg_aoa/config/run_profile.py)
 
-در prescribed نردبان را شما تعیین می‌کنید؛ در experimental کانال با preparation و bounds از RF انتخاب می‌شود. طول‌موج پیشنهادی در proposed_wavelengths_nm_not_applied خودکار اعمال نمی‌شود. reference در نام فایل به معنی نزدیک‌بودن همهٔ میدان‌ها به رزونانس نیست؛ prescribed_reference نمونهٔ تشخیصی و دارای detuning اپتیکی بزرگ است.
+In `prescribed` mode you declare the ladder. In `experimental` mode the channel is selected from RF, preparation and bounds. Values in `proposed_wavelengths_nm_not_applied` are proposals. A filename containing `reference` can have large optical detuning, as in `prescribed_reference`.
 
-دستورهای شروع در [README اصلی](../README.md) آمده‌اند. --diagnostics-only workers و DoA معمول را اجرا نمی‌کند؛ برای study مجاز نیست. --no-plots تولید/نمایش شکل CLI را خاموش می‌کند. بدون --output-dir گزارش در ترمینال چاپ می‌شود؛ ذخیرهٔ فایل‌ها را صریح بخواهید. stdout را همیشه JSON خالص فرض نکنید؛ پیام‌های کتابخانه‌ها ممکن است همراه آن باشند.
+The [main README](../README.md) contains verified starting commands. `--diagnostics-only` skips ordinary sensing workers and DoA and is rejected for studies. Specialized diagnostics may still perform numerical work. `--no-plots` disables CLI figure generation/display. Supply `--output-dir` to save artifacts. Library messages may accompany the printed report on stdout.
 
-## خواندن نتیجه
+## Reading a result
 
-برای اجرای تک‌پروفایل، یک پوشهٔ خالی یا تازه به `--output-dir` بدهید. `profile.json` همان بایت‌هایی است که برنامه خوانده است. `manifest.json` آخرین فایل است و SHA-256 ورودی و خروجی‌ها، نسخهٔ وابستگی‌ها و وضعیت Git را ثبت می‌کند. اگر manifest وجود ندارد، ذخیرهٔ اجرا کامل نشده است؛ برای اجرای دوباره پوشهٔ دیگری انتخاب کنید. اگر Git در دسترس نباشد، فیلدهای مربوط به آن `null` هستند.
+Use a fresh or empty output directory. `profile.json` retains the bytes consumed by the program. `manifest.json` is published last and records input/output SHA-256 values, dependency versions and Git state. Its absence means publication is incomplete. Choose another directory for a retry. Unavailable Git fields are recorded as null.
 
-| بخش گزارش | تفسیر |
+| Report section | Interpretation |
 | --- | --- |
-| atom، levels، applied_fields | گونه، تراز حل‌شده و میدان اعمال‌شده؛ با پروفایل تطبیق دهید |
-| detunings_rad_per_us، rabi_rad_per_us | detuningهای probe/coupling/RF و Rabiهای probe/coupling/LO/signal |
-| rf_orientation، signed_if_mhz | جهت انرژی RF و اختلاف علامت‌دار signal−LO؛ یکی نیستند |
-| decay_rate_basis، radiative_model | مبنای نرخ و دامنهٔ مدل radiative |
-| diagnostics_only، sensing | تشخیص در برابر اجرای زمانی؛ نبود sensing در diagnostics طبیعی است |
-| sensing | زاویهٔ واقعی/تخمینی، تعداد مسیر و نمونه و تنظیمات اجرای مؤثر |
-| if_measurement | سنجه‌های استخراج IF؛ واحد و تعریف هر سنجه را از همان بخش بخوانید |
-| noise_status و پرچم‌های included | اثر اجراشده را از declaration جدا می‌کنند |
-| temporal_ode | تنظیمات و وضعیت اجرای حل؛ برای ادعای همگرایی کافی نیست |
+| `atom`, `levels`, `applied_fields` | Species, resolved levels and applied fields to compare against the profile |
+| `detunings_rad_per_us`, `rabi_rad_per_us` | Probe/coupling/RF detunings and probe/coupling/LO/signal Rabi frequencies |
+| `rf_orientation`, `signed_if_mhz` | RF energy direction and signed signal−LO difference |
+| `decay_rate_basis`, `radiative_model` | Rate basis and radiative model scope |
+| `diagnostics_only`, `sensing` | Diagnostic status and temporal sensing results |
+| `sensing` | True/estimated angle, path/sample counts and effective execution settings |
+| `sensing.estimated_aoa_grid_deg`, `sensing.doa_peak_refined` | Original grid peak and refinement status for grid estimators |
+| `if_measurement` | IF metrics with their declared definitions and units |
+| `noise_status` and `included` flags | Effects actually executed |
+| `temporal_ode` | Configured/effective solver settings, source and execution status |
 
-در نمونهٔ آغازین نویز، Zeeman و ensemble Doppler فعال نیستند. برابری زاویه در این نمونهٔ ایده‌آل و تک‌منبع، دقت آماری یا عملکرد در نویز را تعیین نمی‌کند. پارامتر target_azimuth_deg ورودی حقیقت شبیه‌سازی است، دادهٔ تجربی نیست.
+The starting sensing example has noise, Zeeman and Doppler ensembles disabled. `target_azimuth_deg` supplies simulation truth. Agreement under this ideal single-source model establishes phase preservation through the simulated pipeline. Statistical accuracy and experimental agreement require separate evidence.
 
-تابع save_profile_results در [profile_execution.py](../rydberg_aoa/simulation/profile_execution.py) دادهٔ تک‌اجرا را در simulation_arrays.npz می‌نویسد. برای مسیر AoA معمول:
+`save_profile_results` writes single-run arrays to `simulation_arrays.npz`. [Result writer](../rydberg_aoa/simulation/profile_execution.py)
 
-- tlist زمان µs و time_traces به ترتیب مسیر، سپس زمان است.
-- complex_responses پاسخ مختلط هر مسیر و array_positions موقعیت‌های متناظر است.
-- if_snapshots ماتریس حسگر × پنجره و sample_covariance کوواریانس همین داده است.
-- fft_frequency_path_* و fft_complex_path_* دادهٔ FFT هر مسیرند؛ طیف FFT را با تخمین دقیق IF یکی نگیرید.
-- angles و power فقط برای تخمین‌گر دارای طیف ذخیره می‌شوند؛ ESPRIT و Root-MUSIC الزاماً منحنی زاویه‌ای ندارند.
-- spectrum_*، trial_* و آرایه‌های detector فقط در مسیر مرتبط حاضرند. واحد trace نویزی را از sensing_trace_units یا receipt آشکارساز بخوانید؛ همهٔ traceها جریان الکتریکی نیستند.
+- `tlist` uses µs. `time_traces` is ordered by path, then time.
+- `complex_responses` contains one complex response per path. `array_positions` contains matching positions.
+- `if_snapshots` has shape sensors × windows. `sample_covariance` is its covariance.
+- `fft_frequency_path_*` and `fft_complex_path_*` hold per-path FFT data. Precise IF extraction uses its own fit.
+- `angles` and `power` are present for estimators with a spectrum. Search-free methods have their own outputs.
+- `spectrum_*`, `trial_*` and detector arrays appear on their associated paths. Read `sensing_trace_units` or the detector receipt for trace units.
 
-برای خواندن آرایه‌ها با NumPy از np.load روی مسیر فایل استفاده کنید و ابتدا نام‌ها و shapeها را بررسی کنید. خروجی IF-only قرارداد مستقل در [if_only.py](../rydberg_aoa/simulation/if_only.py) دارد؛ وجود آرایه‌های AoA را برای آن فرض نکنید.
+Load NPZ files with `np.load` and inspect names and shapes first. IF-only has a separate output contract. [IF-only implementation](../rydberg_aoa/simulation/if_only.py)
 
-## study و نگهداری داده
+## Studies and data retention
 
-CLI برای پروفایل study از [execute_study](../rydberg_aoa/simulation/study_execution.py) استفاده می‌کند. [study_output.py](../rydberg_aoa/simulation/study_output.py) گزارش study_report.json، پروفایل study_profile.json و زیرپوشه‌های نقاط/trialهای متناسب با نوع مطالعه را می‌نویسد. برخی مسیرها calibration و null_validation جدا دارند. writer از مخلوط‌کردن manifest موجود با مطالعهٔ تازه جلوگیری می‌کند؛ بااین‌حال همیشه پوشهٔ تازه بدهید. نبود گزارش نهایی پس از شکست، موفقیت مطالعه نیست.
+Study profiles dispatch to `execute_study`. The study writer stores `study_report.json`, `study_profile.json` and point/trial subdirectories appropriate to the study type. Some paths have separate calibration and null-validation outputs. Existing manifests are protected from mixing with a fresh study. Always choose a fresh destination. Preserve the original input, code/environment version and numerical settings with the result. [Study execution](../rydberg_aoa/simulation/study_execution.py) · [Study writer](../rydberg_aoa/simulation/study_output.py) · [Reproducibility](README.md)
 
-همراه نتیجه، JSON اصلی، نسخهٔ کد و محیط و تنظیمات عددی را نگه دارید؛ [راهنمای پژوهشی](README.md) فهرست بازتولیدپذیری را توضیح می‌دهد.
+## Troubleshooting
 
-## عیب‌یابی
+- ARC construction with `readonly database` requires writable user atomic data. Fix access to the declared data source.
+- `PhysicsConfigurationError` requires checking declarations, q, mJ, bounds and option compatibility.
+- Preserve the exception chain and settings when a solver or worker fails. Numerical tolerances and baselines must follow their documented contracts.
+- Runtime grows with paths, samples, velocity classes, study points and trials. Start with a bounded example.
+- For OpenBLAS allocation errors, retry with `OPENBLAS_NUM_THREADS=1`, `OMP_NUM_THREADS=1` and `MKL_NUM_THREADS=1`. These are process-resource settings.
 
-- خطای ساخت ARC همراه readonly database: دسترسی نوشتن پایگاه کاربر را بررسی کنید؛ مشکل مجوز را با تغییر اتم یا دادهٔ ساختگی حل نکنید.
-- PhysicsConfigurationError: declaration، q، mJ، bounds و سازگاری گزینه‌ها را اصلاح کنید؛ خوانده‌شدن JSON اثبات حل‌پذیری فیزیک نیست.
-- خطای solver/worker: زنجیرهٔ خطا و تنظیمات را حفظ کنید؛ tolerance یا baseline را صرفاً برای عبور آزمون تغییر ندهید.
-- اجرای طولانی: تعداد مسیر، نمونه، کلاس سرعت، نقاط study و trialها هزینه را افزایش می‌دهند؛ ابتدا نمونهٔ آغازین را اجرا کنید.
+## Profile and noise versions
 
+The top-level profile version and `noise.schema_version` are independent. Tracked executable examples use profile version 2. Version 1 remains readable. In version 2, `environment: null` preserves explicit temporal rates without a thermal environment, `spectrum: null` leaves spectrum calculation unrequested, and a prescribed diagnostics profile may set `execution: null`. Spectrum computation requires an explicit environment and execution. A thermal budget without execution is rejected. The report records `input_schema_version`.
 
-## نسخهٔ پروفایل و قرارداد نویز
+Tracked noise examples use version 4. Versions 1–3 remain readable.
 
-نسخهٔ اصلی پروفایل و نسخهٔ بلوک `noise` مستقل‌اند. نمونه‌های اجرایی ثبت‌شده از نسخهٔ اصلی ۲ استفاده می‌کنند. نسخهٔ ۱ برای ورودی‌های قدیمی همچنان خوانده می‌شود. در نسخهٔ ۲، `environment: null` یعنی محیطی تعریف نشده و نرخ‌های صریح اجرای زمانی حفظ می‌شوند. `spectrum: null` یعنی محاسبهٔ طیف درخواست نشده است. در پروفایل prescribed تشخیصی، `execution: null` اجرای زمانی را غیرفعال می‌کند. طیف به محیط و اجرای صریح نیاز دارد و بودجهٔ حرارتی بدون اجرا پذیرفته نمی‌شود. گزارش اجرا نسخهٔ ورودی را در `input_schema_version` ثبت می‌کند.
+- `enabled` controls the whole noise block. Sources share `seed` and `trials`.
+- `drive` is null or contains `settings` and `sources`. Each RF/laser source retains its own `enabled` key and parameters.
+- `readout` is null or selects `model: "gaussian"` or `model: "pin"` with the corresponding sources. PIN requires `detector`. Combined drive/readout uses `readout.enabled` independently. Standalone readout uses `noise.enabled`.
+- An enabled PIN detector still converts the signal when its noise sources are disabled. Gaussian and PIN are alternative readout models within a profile.
 
-نمونه‌های نویزی ثبت‌شده از `noise.schema_version: 4` استفاده می‌کنند. نسخه‌های ۱ تا ۳ همچنان خوانده می‌شوند. در قالب جدید:
-
-- `enabled` کل بلوک نویز را کنترل می‌کند. `seed` و `trials` بین بخش‌ها مشترک‌اند.
-- `drive` یا `null` است یا `settings` و `sources` را دارد. هر منبع RF یا لیزر کلید `enabled` و پارامترهای خودش را حفظ می‌کند.
-- `readout` یا `null` است یا `model: "gaussian"` یا `model: "pin"` و منابع همان مدل را دارد. PIN به بلوک `detector` نیاز دارد. هنگام ترکیب با drive، `readout.enabled` خوانش را مستقل کنترل می‌کند. برای خوانش مستقل از `noise.enabled` استفاده می‌شود.
-- خاموش‌کردن همهٔ منابع PIN با خاموش‌کردن آشکارساز فرق دارد. PIN روشن با منابع خاموش همچنان مسیر تبدیل آشکارساز را اجرا می‌کند. Gaussian و PIN دو انتخاب خوانش‌اند و هم‌زمان در یک پروفایل اجرا نمی‌شوند.
-
-نمونهٔ Gaussian در [noise002](../examples/noise002/prescribed_gaussian.json) و نمونهٔ drive همراه PIN در [noise005](../examples/noise005/prescribed_rf_pin.json) قرار دارد. نسخهٔ جدید JSON به همان مدل‌های اجرایی قبلی نگاشت می‌شود. قالب گزارش نویز و شناسه‌های جریان تصادفی حفظ شده‌اند.
+The newer JSON maps to the existing execution models while preserving report formats and random-stream identifiers. [Gaussian example](../examples/noise002/prescribed_gaussian.json) · [Drive with PIN](../examples/noise005/prescribed_rf_pin.json)

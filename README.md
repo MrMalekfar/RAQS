@@ -1,16 +1,16 @@
 # RAQS — Rydberg AoA Simulation
 
-RAQS نرم‌افزاری پژوهشی برای مدل‌سازی پاسخ حسگر اتمی ریدبرگ به RF و تخمین زاویهٔ ورود (AoA) از چند مسیر حسگری است. مسیر اصلی، میدان‌های probe، coupling، LO و signal را به مدل اتمی، حل Lindblad، آشکارسازی heterodyne و پردازش DoA متصل می‌کند. کاربرد آن مطالعهٔ عددی EIT، پاسخ IF و اثر هندسه و نویز بر گیرندهٔ شبیه‌سازی‌شده است. عبور آزمون‌ها به معنی تأیید تجربی مدل یا تضمین دقت دستگاه واقعی نیست.
+RAQS is research software for modeling the RF response of a Rydberg-atom receiver and estimating angle of arrival (AoA) from multiple sensing paths. Its main pipeline connects probe, coupling, LO and signal fields to an atomic model, Lindblad evolution, heterodyne detection and DoA processing. It supports numerical studies of EIT, IF response, array geometry and noise. Experimental validation and hardware accuracy require independent evidence.
 
-## شروع
+## Getting started
 
-برای اجرای رابط گرافیکی در ویندوز، فایل ZIP مخزن را کامل از حالت فشرده خارج کنید. اگر Python 3.11 نسخهٔ ۶۴ بیتی را ندارید، آن را همراه با Python Launcher نصب کنید. سپس در پوشهٔ استخراج‌شده روی **Launch RAQS GUI.cmd** دوبار کلیک کنید. لانچر محیط پروژه را می‌سازد و بسته‌های لازم را نصب می‌کند. برای دانلود بسته‌ها در اجرای اول اتصال اینترنت لازم است. [دریافت Python برای ویندوز](https://www.python.org/downloads/release/python-3119/) · [راهنمای رابط گرافیکی](docs/gui.md)
+On Windows, extract the complete repository ZIP to a writable folder. Install 64-bit Python 3.11 with Python Launcher, then double-click **Launch RAQS GUI.cmd**. The launcher creates the project environment and installs its dependencies. The first launch needs internet access and may take several minutes. [Python for Windows](https://www.python.org/downloads/release/python-3119/) · [Desktop guide](docs/gui.md)
 
-برای ساخت نصب‌کنندهٔ مستقل از Python سیستم، از گردش‌کار **Windows installer** در GitHub Actions استفاده کنید. [راهنمای ساخت، آزمون و دریافت فایل نصب](docs/gui.md#ساخت-و-آزمون-نصبکننده)
+The **Windows installer** GitHub Actions workflow builds a standalone installer. [Build, test and download instructions](docs/gui.md#building-and-testing-the-installer)
 
-### اجرای خط فرمان
+### Command line
 
-از ریشهٔ مخزن، در PowerShell با Python 3.11:
+Run these commands in PowerShell from the repository root with Python 3.11.
 
 ```powershell
 py -3.11 -m venv .venv
@@ -21,27 +21,29 @@ py -3.11 -m venv .venv
 & ./.venv/Scripts/python.exe main.py --profile examples/lab006/experimental_near_resonant.json --no-plots --output-dir outputs/sensing/run01
 ```
 
-برای مصرف بدون آزمون، requirements.txt کافی است. در Linux/macOS محیط را با python3.11 بسازید و از .venv/bin/python استفاده کنید؛ بررسی این بازنویسی روی Windows انجام شده است. نسخه‌های مستقیم pin شده‌اند، اما قفل کامل وابستگی‌های گذرا نیستند. ARC به پایگاه دادهٔ قابل نوشتن در پوشهٔ کاربر نیاز دارد.
+`requirements.txt` is sufficient for runtime use. On Linux, create the environment with `python3.11` and use `.venv/bin/python`. Core tests run on Windows and Linux in GitHub Actions. GUI tests run on Windows. Direct dependencies are pinned. Transitive dependencies are not fully locked. ARC needs writable atomic data in the user directory.
 
-اجرای اول فقط تشخیص تنظیمات و حل دادهٔ اتمی است؛ اجرای دوم sensing را اجرا می‌کند. در run_report.json نمونهٔ دوم، سه مسیر، ۶۰۱ نمونه در هر مسیر، IF برابر 0.1 MHz و زاویهٔ ورودی/تخمینی ‎-30° انتظار می‌رود. این تطابق آزمون مسیر اجراست و معیار دقت عمومی حسگر نیست. آرایه‌ها در simulation_arrays.npz ذخیره می‌شوند. برای هر اجرای تک‌پروفایل، پوشه‌ای تازه یا خالی انتخاب کنید. ورودی در profile.json ثبت می‌شود و وجود manifest.json نشانهٔ پایان موفق ذخیره است.
+The first profile performs configuration diagnostics and atomic resolution. The second runs sensing with three paths, 601 samples per path, a 0.1 MHz IF and a target angle of -30°. The refined estimate is approximately -30.000038° in the verified example. This checks the simulation path and phase preservation under its assumptions. It does not establish general receiver accuracy.
 
-## دامنهٔ قابلیت‌ها
+Choose a fresh or empty output directory for each profile run. The consumed input is saved as `profile.json`, arrays as `simulation_arrays.npz`, and a final `manifest.json` records successful artifact publication. If OpenBLAS reports allocation errors, set `OPENBLAS_NUM_THREADS=1`, `OMP_NUM_THREADS=1` and `MKL_NUM_THREADS=1` before running. These thread settings were used for local verification.
 
-- پروفایل صریح prescribed برای نردبان اعلام‌شده و experimental برای انتخاب کانال در bounds سخت‌افزار؛ نام experimental به معنی دادهٔ اندازه‌گیری‌شده نیست.
-- پاسخ چهارترازی prepared-channel، طیف EIT، استخراج IF و پردازش آرایه؛ Doppler، transit و نویز با فعال‌سازی و محدودیت‌های مستقل.
-- phase beamforming، Bartlett، MVDR، MUSIC، ESPRIT و Root-MUSIC با قیود هندسه و snapshots خودشان.
-- مطالعهٔ چندنقطه‌ای، تکرار نویزی، آشکارسازی و بررسی همگرایی؛ وجود این مسیرها تضمین اعتبار هر ترکیب تنظیمات نیست.
+## Capabilities and scientific scope
 
-پروفایل عمومی یک منبع RF با elevation صفر را مدل می‌کند. مدل اصلی شبیه‌سازی کامل optical pumping، سلول چندترازی یا دینامیک مخلوط ایزوتوپی نیست. Zeeman در گزارش مسیر اصلی وارد نشده است. مسیر magnetic core تشخیصی است و گیرندهٔ عمومی چندترازی را جایگزین نمی‌کند.
+- `prescribed` profiles declare a ladder. `experimental` profiles select a channel within hardware bounds. The latter name denotes a simulation mode.
+- Four-level prepared-channel response, EIT spectra, IF extraction and array processing. Doppler, transit and noise have independent switches and execution limits.
+- Phase beamforming, Bartlett, MVDR, MUSIC, ESPRIT and Root-MUSIC, each with geometry and snapshot requirements. Grid estimators refine the peak between scan points and retain the grid estimate in diagnostics.
+- Multipoint studies, noise campaigns, detection and convergence checks. The parser and execution path determine supported combinations.
 
-[راهنمای پژوهشی](docs/README.md)، [اجرای پروفایل و تفسیر خروجی](docs/usage.md) و [نقشهٔ مثال‌ها](examples/README.md) جزئیات را توضیح می‌دهند.
+The public profile pipeline models one RF source at zero elevation. The effective four-level model assumes a prepared magnetic channel. General optical pumping, full multilevel vapor-cell dynamics and dynamical isotope mixtures require additional modeling. The magnetic-core path provides specialized diagnostics. Check each run's declared scope before interpreting it as a receiver result.
 
-## آزمون و توسعه
+Undeclared temporal ODE controls use `rtol=1e-10`, `atol=1e-12` and `nsteps=5000`. Explicit profile controls take precedence. The field phase-diffusion linewidth comparison is a separate analysis tool. The main pipeline retains its existing per-level linewidth model. [Research guide](docs/README.md) · [Execution and outputs](docs/usage.md) · [Example profiles](examples/README.md)
+
+## Tests and development
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest tests/test_lab006_live_entrypoint.py -q -rA -s
 ```
 
-[README آزمون‌ها](tests/README.md) دستورهای گسترده‌تر و معنای skip را توضیح می‌دهد. برای توسعه از [معماری](architecture.md) و [AGENTS.md](AGENTS.md) شروع کنید.
+See the [test guide](tests/README.md) for wider checks, CI results and skip semantics. Start development with the [architecture](architecture.md) and [development instructions](AGENTS.md).
 
-این مخزن کد، آزمون و پروفایل‌های نمونه را نگه می‌دارد؛ آرشیو پایان‌نامه و نتایج تاریخی جزو آن نیستند. مجوز کد [MIT](LICENSE) است.
+This repository contains code, tests and example profiles. Historical research tools and thesis inputs have separate provenance. The software is licensed under [MIT](LICENSE).

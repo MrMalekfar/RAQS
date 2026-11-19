@@ -1,5 +1,7 @@
 # Workbench verification — 2026-11-09
 
+This historical record describes the named development revisions and their original checks. Current Windows/Linux CI evidence is recorded in the [test guide](../tests/README.md#verified-review-branches-2026-11-19), and packaging instructions are in the [desktop guide](gui.md#building-and-testing-the-installer).
+
 Branch: `codex/research-workbench`. All changes remain local. No commit, push or merge was performed. Existing uncommitted changes, chapter-three profiles and the user's profile copy were retained.
 
 ## Audit and scope

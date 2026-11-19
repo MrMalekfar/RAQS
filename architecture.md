@@ -1,18 +1,20 @@
-# معماری مسیر اجرا
+# Execution architecture
 
-ورودی عمومی `main.py` به `cli.main()` می‌رسد. CLI پروفایل JSON را با `config.run_profile.load_run_profile()` می‌خواند و به `simulation.profile_execution.execute_profile()` یا، برای مطالعهٔ چندنقطه‌ای، `simulation.study_execution.execute_study()` می‌دهد.
+The public entry point `main.py` calls `cli.main()`. The CLI loads a JSON profile through `config.run_profile.load_run_profile()` and dispatches to `simulation.profile_execution.execute_profile()` or, for a multipoint study, `simulation.study_execution.execute_study()`.
 
-| بخش | مسئولیت |
+| Package | Responsibility |
 | --- | --- |
-| `config/` | قرارداد پروفایل، تنظیمات و مقداردهی صریح فیزیک |
-| `arc/` | دادهٔ اتمی و گذارهای اعلام‌شده |
-| `physics/` | Hamiltonian، collapse operators، Doppler و transmission |
-| `simulation/` | حل، orchestration، آشکارسازی و مطالعهٔ چندنقطه‌ای |
-| `doa/` | هندسه، snapshots، covariance و تخمین‌گرها |
-| `signal_processing/` و `tools/` درون بسته | ابزارهای مصرف‌شده توسط کد اصلی |
-| `visualization/` | تولید شکل از نتیجه |
-| `analytical/` و `level_finder/` | ابزارهای تحلیلی و انتخاب تراز موجود |
+| `config/` | Profile contracts, configuration and explicit physical initialization |
+| `arc/` | Atomic data and declared transitions |
+| `physics/` | Hamiltonians, collapse operators, Doppler and transmission |
+| `simulation/` | Solvers, orchestration, detection and multipoint studies |
+| `doa/` | Geometry, snapshots, covariance and estimators |
+| `signal_processing/` and `tools/` | Helpers used by the main package |
+| `visualization/` | Figures generated from results |
+| `analytical/` and `level_finder/` | Analytical tools and level selection |
 
-همهٔ مسیرهای جدول زیر `rydberg_aoa/` هستند. وجود یک ماژول به معنی فعال بودن آن در هر پروفایل نیست. تنظیمات و محدودیت‌های هر اثر در parser و اجراکنندهٔ همان پروفایل بررسی می‌شود؛ کانال، مدل یا مقداردهی نامعتبر باید با خطا آشکار شود.
+All package paths in this table are under `rydberg_aoa/`. Profile parsers and executors validate effect settings and their compatibility. Invalid channels, models and initialization requests fail explicitly.
 
-ورودی‌های عادی در پروفایل‌ها تعریف می‌شوند. `outputs/` تنها نتیجهٔ اجرا را نگه می‌دارد؛ آزمون‌های فعال به فایل‌های اجرای تاریخی در آن وابسته نیستند. دو baseline ریشه برای قراردادهای رگرسیون نگهداری شده‌اند و نباید برای پنهان‌کردن شکست آزمون بازنویسی شوند.
+Ordinary inputs are declared in profiles. `outputs/` contains generated results. Active tests use declared fixtures independently of historical runs. The two root baselines support regression contracts and must retain their original values when investigating failures.
+
+Temporal workers certify density matrices before consuming observables. The direct steady-state solver and the adaptive Doppler affine kernel share the trace-constrained solve and NUM-SS-001 certification. The optimized Doppler path compares reference coherences at every scan point before using the kernel. DoA grid estimators retain the discrete peak in diagnostics alongside the refined estimate.
